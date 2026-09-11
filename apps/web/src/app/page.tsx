@@ -1,5 +1,5 @@
-import { APP_NAME, TASK_STATUS_ORDER } from '@my-ba/shared';
-import { PipelineOutline } from '@/components/pipeline-outline';
+import { APP_NAME, TASK_STATUS_ORDER } from "@my-ba/shared"
+import { PipelineOutline } from "@/components/pipeline-outline"
 
 export default function HomePage() {
   return (
@@ -12,5 +12,5 @@ export default function HomePage() {
       </header>
       <PipelineOutline stages={TASK_STATUS_ORDER} />
     </main>
-  );
+  )
 }

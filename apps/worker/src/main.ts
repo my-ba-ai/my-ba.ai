@@ -1,7 +1,7 @@
-import 'reflect-metadata';
-import { Logger } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { WorkerModule } from './worker.module';
+import "reflect-metadata"
+import { Logger } from "@nestjs/common"
+import { NestFactory } from "@nestjs/core"
+import { WorkerModule } from "./worker.module"
 
 /**
  * The worker runs as a standalone Nest application context — no HTTP server.
@@ -10,10 +10,13 @@ import { WorkerModule } from './worker.module';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(WorkerModule, {
     bufferLogs: true,
-  });
+  })
 
-  app.enableShutdownHooks();
-  Logger.log('Worker context started; no queues registered yet (P0-4)', 'Bootstrap');
+  app.enableShutdownHooks()
+  Logger.log(
+    "Worker context started; no queues registered yet (P0-4)",
+    "Bootstrap",
+  )
 }
 
-void bootstrap();
+void bootstrap()

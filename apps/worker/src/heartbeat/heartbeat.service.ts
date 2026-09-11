@@ -1,5 +1,5 @@
-import { Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
-import { QUEUE_NAMES } from '@my-ba/shared';
+import { Injectable, Logger, type OnApplicationBootstrap } from "@nestjs/common"
+import { QUEUE_NAMES } from "@my-ba/shared"
 
 /**
  * Placeholder that proves the worker process boots and can see shared code.
@@ -7,9 +7,11 @@ import { QUEUE_NAMES } from '@my-ba/shared';
  */
 @Injectable()
 export class HeartbeatService implements OnApplicationBootstrap {
-  private readonly logger = new Logger(HeartbeatService.name);
+  private readonly logger = new Logger(HeartbeatService.name)
 
   onApplicationBootstrap(): void {
-    this.logger.log(`Queues awaiting wiring: ${Object.values(QUEUE_NAMES).join(', ')}`);
+    this.logger.log(
+      `Queues awaiting wiring: ${Object.values(QUEUE_NAMES).join(", ")}`,
+    )
   }
 }
