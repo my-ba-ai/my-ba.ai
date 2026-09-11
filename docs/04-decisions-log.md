@@ -40,6 +40,9 @@ Status key: **LOCKED** (don't relitigate without flagging) · **PROVISIONAL** (l
 | D31 | Agent ranking = 0.4 × rating + 0.3 × log(reviews) + 0.3 × recent solds | LOCKED | Pure function, unit-testable, no LLM |
 | D32 | License verification is manual for MVP | LOCKED | 8 states, mostly web forms. Automated verification is post-MVP |
 | D33 | Drizzle over Prisma | PROVISIONAL | Drizzle doesn't fight raw TimescaleDB/hypertable queries. Confirm before P0-2 |
+| D34 | Oxlint + oxfmt for lint and format | LOCKED | Single fast toolchain; no type-aware lint rules — `tsc --noEmit` in CI covers that class of bug |
+| D35 | Vitest as the single test runner across all workspaces | LOCKED | Nest apps transform through SWC (`unplugin-swc`) because esbuild does not emit decorator metadata |
+| D36 | Code and docs share one repo; docs live under `docs/` | LOCKED | Docs are versioned with the code they describe; Project knowledge is uploaded from `docs/` |
 
 ---
 
@@ -62,3 +65,4 @@ Status key: **LOCKED** (don't relitigate without flagging) · **PROVISIONAL** (l
 | Date | Change |
 |---|---|
 | (initial) | D01–D33 captured from the design conversation. D22 and D33 flagged provisional. Q01–Q07 outstanding. |
+| 2026-09-11 | P0-1 delivered. D34–D36 added (Oxlint/oxfmt, Vitest, single repo with `docs/`). Q03 still open and now blocking P0-2. |
