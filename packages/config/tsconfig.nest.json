@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "my-ba.ai NestJS app",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "incremental": true
+  }
+}

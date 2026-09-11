@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "my-ba.ai base",
+  "compilerOptions": {
+    "target": "ES2023",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "pretty": true
+  }
+}

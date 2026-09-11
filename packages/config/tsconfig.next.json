@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "my-ba.ai Next.js app",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "jsx": "preserve",
+    "allowJs": true,
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": true,
+    "isolatedModules": true
+  }
+}

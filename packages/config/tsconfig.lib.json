@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "my-ba.ai shared library (CJS, consumable by Nest and Next)",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src"
+  }
+}

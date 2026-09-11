@@ -1,0 +1,34 @@
+{
+  "name": "@my-ba/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --port 3000",
+    "start": "next start --port 3000",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf .next .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@my-ba/shared": "workspace:*",
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@my-ba/config": "workspace:*",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^26.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

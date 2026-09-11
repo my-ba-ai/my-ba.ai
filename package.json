@@ -1,0 +1,38 @@
+{
+  "name": "my-ba-ai",
+  "version": "0.0.0",
+  "private": true,
+  "description": "my-ba.ai — AU investment property suburb-selection and agent-outreach SaaS",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run test",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.2.0",
+    "oxlint": "^1.0.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "@tailwindcss/oxide",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
+  }
+}
