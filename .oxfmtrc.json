@@ -1,11 +1,12 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxfmt/configuration_schema.json",
-  "lineWidth": 100,
-  "indentWidth": 2,
-  "semicolons": true,
-  "quoteStyle": "single",
-  "trailingCommas": "all",
-  "ignore": [
+  "$schema": "https://json.schemastore.org/oxfmtrc.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "jsxSingleQuote": false,
+  "ignorePatterns": [
     "**/dist/**",
     "**/.next/**",
     "**/.turbo/**",
