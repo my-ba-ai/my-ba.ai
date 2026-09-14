@@ -39,7 +39,7 @@ Status key: **LOCKED** (don't relitigate without flagging) · **PROVISIONAL** (l
 | D30 | All stages default to HITL for MVP | LOCKED | Approval UI is core, not optional |
 | D31 | Agent ranking = 0.4 × rating + 0.3 × log(reviews) + 0.3 × recent solds | LOCKED | Pure function, unit-testable, no LLM |
 | D32 | License verification is manual for MVP | LOCKED | 8 states, mostly web forms. Automated verification is post-MVP |
-| D33 | Drizzle over Prisma | PROVISIONAL | Drizzle doesn't fight raw TimescaleDB/hypertable queries. Confirm before P0-2 |
+| D33 | Drizzle over Prisma | LOCKED | Wins on hypertables + pgvector, the two things that matter for this schema. No parallel migration systems to keep in sync. |
 | D34 | Oxlint + oxfmt for lint and format | LOCKED | Single fast toolchain; no type-aware lint rules — `tsc --noEmit` in CI covers that class of bug |
 | D35 | Vitest as the single test runner across all workspaces | LOCKED | Nest apps transform through SWC (`unplugin-swc`) because esbuild does not emit decorator metadata |
 | D36 | Code and docs share one repo; docs live under `docs/` | LOCKED | Docs are versioned with the code they describe; Project knowledge is uploaded from `docs/` |
@@ -52,7 +52,6 @@ Status key: **LOCKED** (don't relitigate without flagging) · **PROVISIONAL** (l
 |---|---|---|---|
 | Q01 | Which HTAG tier includes historical time-series, and what are the rate limits? | P1-1, P1-2 | Determines whether the weekly full-suburb refresh is affordable, and whether we need to narrow the refresh scope |
 | Q02 | Criteria as fixed structured fields, or natural-language prompt parsed into filters? | P1-3 | Fixed is predictable and shippable; NL is more "AI-native" but adds a parsing agent and a failure mode. Leaning fixed for MVP |
-| Q03 | Drizzle vs Prisma — confirm D33 | P0-2 | Schema work starts here, hard to change later |
 | Q04 | Geographic scope for the first working run — all states, or one state to validate? | P1-2 | Smaller scope means faster iteration and lower API cost during development |
 | Q05 | How is the "weekly contact cadence" (original Step 6) modelled? | Phase 5 | Currently only `TaskAgentContacts.status` is sketched. A real cadence needs reminders and follow-up scheduling |
 | Q06 | Spam Act compliance specifics for platform-sent email on my behalf | Phase 5 | Consent, sender identification, functional unsubscribe. Affects the email schema and send path |

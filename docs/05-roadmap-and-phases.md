@@ -104,5 +104,4 @@ P0-5 spike ──▶ P1-4/P1-6 (orchestration) ──▶ Phase 2 agents ──�
    └─ if it fails: redesign orchestrator, +1–2 weeks
 
 Q01 (HTAG tier) ──▶ P1-1/P1-2 (can't size the refresh job without it)
-Q03 (ORM)       ──▶ P0-2 (schema work starts here)
 ```
