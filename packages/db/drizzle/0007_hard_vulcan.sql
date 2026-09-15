@@ -1,0 +1,1 @@
+DROP TABLE "suburb_embeddings" CASCADE;

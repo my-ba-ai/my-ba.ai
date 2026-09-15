@@ -14,8 +14,8 @@
 
 | Ticket | Description | Acceptance criteria |
 |---|---|---|
-| P0-1 | Monorepo scaffold | Turborepo + pnpm workspace with `apps/api` (NestJS), `apps/web` (Next.js), `apps/worker`, `packages/shared` (types, constants, Zod schemas). Shared tsconfig, lint, CI. |
-| P0-2 | Database setup | Postgres with TimescaleDB + pgvector enabled. Schema for `Users`, `Tenants`, `PurchaseTasks`, `Suburbs`. Migrations run on startup. `tenant_id` present everywhere. |
+| ~~P0-1~~ | Monorepo scaffold **done 2026-09-10** | Turborepo + pnpm workspace with `apps/api` (NestJS), `apps/web` (Next.js), `apps/worker`, `packages/shared` (types, constants, Zod schemas). Shared tsconfig, lint, CI. |
+| ~~P0-2~~ | Database setup — **done 2026-09-14** | Postgres with TimescaleDB + pgvector enabled. Schema for `Users`, `Tenants`, `PurchaseTasks`, `Suburbs`, plus a `suburb_metrics_ts` hypertable and a pgvector column so both extensions are exercised, not merely installed. ~~Migrations run on startup~~ → explicit `pnpm db:migrate` (D39). `tenant_id` present everywhere, enforced by a test. RLS policies live and verified against a non-superuser role (D40). |
 | P0-3 | Auth integration | Clerk or Supabase Auth. JWT middleware in NestJS. Tenant resolution from the token. RLS policies applied. |
 | P0-4 | Redis + BullMQ wiring | `@nestjs/bullmq` registered. One test queue + `@Processor` that logs a job. Bull Board mounted at `/admin/queues`. |
 | **P0-5** | **LangGraph.js HITL spike** | **Riskiest ticket — do this first.** Minimal graph, 3 nodes, one `interrupt()`. Postgres checkpointer via `PostgresSaver`. Verify: run pauses, thread status is `interrupted`, process can restart while paused, resume command continues from checkpoint, state survives. |

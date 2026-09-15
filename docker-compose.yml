@@ -1,0 +1,32 @@
+# Local development infrastructure (P0-2).
+#
+# timescale/timescaledb-ha ships TimescaleDB *and* pgvector in one image, which
+# is what D24 asks for: a single Postgres instance, not three services.
+#
+#   docker compose up -d
+#   pnpm db:migrate
+services:
+  postgres:
+    image: timescale/timescaledb-ha:pg17
+    container_name: my-ba-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: my_ba
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      # The app role's password. The app connects as my_ba_app, never as
+      # postgres, because superusers bypass RLS unconditionally (D26).
+      APP_DB_PASSWORD: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/home/postgres/pgdata/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d my_ba"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  postgres-data:

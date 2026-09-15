@@ -1,0 +1,1 @@
+ALTER TABLE "suburb_metrics_ts" ADD CONSTRAINT "suburb_metrics_ts_system_tenant_only" CHECK ("suburb_metrics_ts"."tenant_id" = '00000000-0000-0000-0000-000000000000'::uuid);
