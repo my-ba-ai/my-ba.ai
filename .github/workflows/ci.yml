@@ -13,10 +13,27 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # `next build` prerenders pages wrapped in <ClerkProvider>, which throws
+      # without a publishable key. Values live in repository variables
+      # (Settings → Secrets and variables → Actions → Variables), never in the
+      # repo. Turbo forwards them to the build task via turbo.json `build.env`.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${{ vars.NEXT_PUBLIC_CLERK_SIGN_IN_URL || '/sign-in' }}
+      NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+
+      # Fail in one second with the fix, not after install + typecheck + tests
+      # with a Next prerender stack trace.
+      - name: Check required CI variables
+        run: |
+          if [ -z "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" ]; then
+            echo "::error::Repository variable NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
 
       - uses: pnpm/action-setup@v4
 
