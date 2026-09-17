@@ -64,6 +64,13 @@
       "when": 1789447754822,
       "tag": "0008_auth_bootstrap",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789620992710,
+      "tag": "0009_langgraph_schema",
+      "breakpoints": true
     }
   ]
 }

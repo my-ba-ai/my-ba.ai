@@ -1,0 +1,44 @@
+{
+  "name": "@my-ba/orchestrator",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Stage orchestration behind the narrow runStage interface (docs/02). P0-5: LangGraph.js durable-interrupt spike.",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
+    "test": "vitest run",
+    "test:integration": "INTEGRATION=1 vitest run",
+    "test:watch": "vitest",
+    "checkpointer:setup": "tsx src/scripts/setup-checkpointer.ts",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.0.0",
+    "@langchain/langgraph": "^1.0.0",
+    "@langchain/langgraph-checkpoint": "^1.0.0",
+    "@langchain/langgraph-checkpoint-postgres": "^1.0.0",
+    "@my-ba/db": "workspace:*",
+    "pg": "^8.16.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@my-ba/config": "workspace:*",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.15.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

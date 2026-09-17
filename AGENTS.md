@@ -101,5 +101,12 @@ copy `apps/api/vitest.config.ts` rather than writing a fresh one.
 Phase order and ticket acceptance criteria are in `docs/05-roadmap-and-phases.md`.
 P0-1 (scaffold), P0-2 (database), P0-3 (auth) and P0-4 (Redis + BullMQ) are done. P0-5 — the LangGraph.js durable-interrupt spike — is
 the gate ticket: if it fails, the orchestrator design changes and Phase 1 waits.
-Keep the orchestrator behind the narrow `runStage(taskId, stage) -> StageResult`
-interface so it stays swappable.
+Keep the orchestrator behind the narrow `Orchestrator` interface in
+`packages/orchestrator/src/stage.ts` (`runStage({ tenantId, taskId, stage }) -> StageResult`)
+so it stays swappable. Never import `@langchain/*` outside that package.
+
+LangGraph checkpoints live in the `langgraph` schema, outside RLS (D51). Tenant scope
+is in the thread id — always build it with `threadIdFor`. A node that calls
+`interrupt()` re-executes from the top on resume: keep side effects out of it or
+before it in a separate node. `pnpm test:integration` is the P0-5 durability suite
+and needs `pnpm db:up && pnpm db:migrate`.
