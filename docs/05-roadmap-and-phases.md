@@ -25,6 +25,28 @@
 
 **Gate:** if P0-5 fails, stop and redesign the orchestrator before Phase 1.
 
+### P0-7 — CI integration job for the P0-5 durability suite
+
+**Description:** CI has no Postgres, so `pnpm test:integration` (the P0-5 gate) runs only on a dev machine. A regression in LangGraph or the checkpointer — a `@langchain/*` bump, a `PostgresSaver` schema change, a lost grant on `langgraph.*` — would merge unnoticed. Add a second job, `integration`, to `.github/workflows/ci.yml`.
+
+- Start Postgres with `pnpm db:up` (`docker compose up -d --wait postgres`), **not** a GitHub Actions `services:` container. The `my_ba_app` role is created by `infra/postgres/init/01-app-role.sql` through `docker-entrypoint-initdb.d`. Service containers start before checkout and can't mount repo files, so that path would need a second copy of the role setup.
+- Job env: `DATABASE_URL=postgresql://my_ba_app:app@localhost:5432/my_ba`, `DATABASE_MIGRATION_URL=postgresql://postgres:postgres@localhost:5432/my_ba`. No `.env` files; `loadEnvFiles` already tolerates their absence.
+- Steps: checkout → pnpm/node setup → `pnpm install --frozen-lockfile` → `pnpm turbo run build --filter=@my-ba/orchestrator...` (the suite imports `@my-ba/db` from `dist`) → `pnpm db:up` → `pnpm db:migrate` → `pnpm test:integration`.
+- Only Postgres is started; Redis isn't needed.
+- On failure, upload `docker compose logs postgres` as an artifact.
+
+**Acceptance criteria:**
+
+1. `integration` runs on every PR and on push to `main`, in parallel with `verify`.
+2. It runs the full `hitl-durability.integration.spec.ts` suite against `timescale/timescaledb-ha:pg17` (the same image as `docker-compose.yml`) and passes on `main`.
+3. The test connects as `my_ba_app`. A step asserts `SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user` returns `false, false`, so the suite can't pass by accident as a superuser.
+4. `pnpm db:migrate` runs from an empty database in CI: Drizzle journal including `0009_langgraph_schema`, then `checkpointer:setup`. This also proves migrations work from scratch, which nothing checks today.
+5. Deliberately breaking the suite (e.g. asserting `prepare` ran twice) fails the job. Verify once on a throwaway branch, then revert.
+6. `integration` is added as a required status check on `main` alongside `verify`.
+7. Job timeout ≤ 15 min. Record the observed image pull time in the PR description.
+
+**Dependencies:** P0-5 (suite, migration 0009 committed). **Risk:** low. Watch items: the `timescaledb-ha` image is large (multi-GB), so the pull may dominate job time; if it's over ~3 min, consider the slimmer `timescale/timescaledb` image plus the pgvector extension, recorded as a D-code because it diverges from local dev. The SIGKILL/child-process tests can be timing-sensitive on shared runners, so fix any flake at its cause rather than adding retries.
+
 ---
 
 ## Phase 1 — HtAG Integration + Suburb Screener (Weeks 2–3)
