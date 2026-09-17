@@ -18,7 +18,7 @@
 | P0-2     | Database setup              | Postgres with TimescaleDB + pgvector enabled. Schema for `Users`, `Tenants`, `PurchaseTasks`, `Suburbs`. Migrations run on startup. `tenant_id` present everywhere.                                                                                                                                                                                                                                               |
 | P0-3     | Auth integration            | Clerk or Supabase Auth. JWT middleware in NestJS. Tenant resolution from the token. RLS policies applied.                                                                                                                                                                                                                                                                                                         |
 | P0-4     | Redis + BullMQ wiring       | Redis in `docker-compose` (`noeviction`, AOF). `@nestjs/bullmq` registered in API (producer) and worker (consumer). `diagnostics` queue: authenticated `POST /api/diagnostics/jobs` enqueues a tenant-stamped payload (D49), worker `@Processor` parses and logs it. Bull Board at `/api/admin/queues` behind basic auth, dev only (D48). `GET /api/health/redis`. Identity cache moved to Redis (D50). **Done.** |
-| **P0-5** | **LangGraph.js HITL spike** | **Riskiest ticket — do this first.** Minimal graph, 3 nodes, one `interrupt()`. Postgres checkpointer via `PostgresSaver`. Verify: run pauses, thread status is `interrupted`, process can restart while paused, resume command continues from checkpoint, state survives. Built as `packages/orchestrator`; checkpoints in the `langgraph` schema (D51); gate is `pnpm test:integration`. **Done.**                                                                                                                                        |
+| **P0-5** | **LangGraph.js HITL spike** | **Riskiest ticket — do this first.** Minimal graph, 3 nodes, one `interrupt()`. Postgres checkpointer via `PostgresSaver`. Verify: run pauses, thread status is `interrupted`, process can restart while paused, resume command continues from checkpoint, state survives. Built as `packages/orchestrator`; checkpoints in the `langgraph` schema (D51); gate is `pnpm test:integration`. **Done.**              |
 | P0-6     | Next.js shell               | Auth-gated routes, nav layout, empty task list, placeholder task detail.                                                                                                                                                                                                                                                                                                                                          |
 
 **Deliverable:** I can log in, see an empty task list, and pause/resume is proven end-to-end.
@@ -65,12 +65,12 @@
   - Add [lefthook](https://github.com/evilmartians/lefthook) (a devDependency, installed through the root `prepare` script) with a `pre-commit` hook that scans **staged** changes only.
   - The subcommand differs across gitleaks v8 minors (`protect --staged` vs `git --staged`), so use whatever the pinned version's `--help` shows.
   - If `gitleaks` isn't installed, the hook prints `brew install gitleaks` and fails. It does not skip silently.
-- **Docs:** `AGENTS.md` → "Secrets and credentials" says the hook and CI job exist, that `git commit --no-verify` is not an agent option, and how to add a *reviewed* allowlist entry (as a PR that names the reason). README "Getting started" gets the `brew install gitleaks` step.
+- **Docs:** `AGENTS.md` → "Secrets and credentials" says the hook and CI job exist, that `git commit --no-verify` is not an agent option, and how to add a _reviewed_ allowlist entry (as a PR that names the reason). README "Getting started" gets the `brew install gitleaks` step.
 - **One-off:** scan the full history once when this lands and record the result (clean, or findings → rotate first, then decide whether to rewrite history) in the PR description.
 
 **Acceptance criteria:**
 
-1. `gitleaks` over the full history of `main` exits 0 with the committed config. Any real finding is rotated at the provider *before* it's allowlisted or the history is rewritten.
+1. `gitleaks` over the full history of `main` exits 0 with the committed config. Any real finding is rotated at the provider _before_ it's allowlisted or the history is rewritten.
 2. On a throwaway branch, committing a file containing `pk_test_` + base64(`example.clerk.accounts.dev$`) is **blocked by the pre-commit hook**. Pushing it with `--no-verify` then **fails the `secrets` CI job**. Both are shown in the PR description, and the branch is deleted afterwards.
 3. The same test with an AWS-shaped key (`AKIA…`) and a PEM private-key header is also caught (this proves the default rules are active).
 4. `pk_test_replace_me` in an `.env.example` and `postgres:postgres@localhost` in `docker-compose.yml` are **not** flagged.
@@ -86,6 +86,41 @@
 - False positives on generated files (`pnpm-lock.yaml` integrity hashes, `drizzle/meta/*_snapshot.json` ids). If they appear, fix them with narrow path+rule allowlists, never by disabling the rule.
 - The hook is local and can be bypassed. CI is the real gate, and the hook just catches mistakes earlier.
 - **Optional:** GitHub's native secret scanning with push protection blocks the push itself. It's free for public repos; for a private org repo, check the current GitHub plan and pricing before relying on it. It complements gitleaks rather than replacing it (it only knows partner token formats).
+
+### P0-9 — Git hooks: format + lint on pre-commit, typecheck on pre-push
+
+**Description:** CI runs `pnpm check` (typecheck, lint, format:check, test). Format and lint failures have reached CI more than once (PR #1, and the P0-5 follow-up "Fixed format issue"), though they're cheap to catch locally. Add git hooks via [lefthook](https://github.com/evilmartians/lefthook) so those failures surface before a commit or push. CI stays the real gate; hooks are just an early warning and can be bypassed.
+
+- **Hook manager:** lefthook, as a root devDependency, installed by the root `prepare` script (`lefthook install`). P0-8 uses the same tool: whichever ticket lands first adds lefthook and `lefthook.yml`, and the other only adds its commands. Don't introduce a second hook manager.
+- **`pre-commit`**, with commands running in parallel on **staged files only**:
+  - `format`: runs `oxfmt` in write mode on `{staged_files}` and re-stages the result (`stage_fixed: true`). The glob covers what oxfmt formats in this repo. It also excludes `.oxfmtrc.json` `ignorePatterns` (`packages/db/drizzle/**`, `pnpm-lock.yaml`, `docs/prototypes/**`, build output), in case oxfmt doesn't apply its ignore list to explicit paths. Check the pinned oxfmt's behaviour, and how it handles an empty or unmatched file list, rather than assuming.
+  - `lint`: runs `oxlint` on staged `*.{ts,tsx,js,jsx,mjs,cjs}`, check only (no `--fix`). It blocks the commit on any error and prints the diagnostics. Warnings don't block, matching CI.
+- **`pre-push`**:
+  - `typecheck`: runs `pnpm typecheck` (Turbo, so cached packages are skipped). It's too slow for every commit but cheap enough per push. It blocks the push on failure.
+- **Partially staged files:** auto-fixing plus `stage_fixed` must not sweep unstaged hunks into the commit. Check how the pinned lefthook version handles this. If it doesn't stash unstaged changes itself, the `format` command must check-only on partially staged files and tell the user to run `pnpm format`.
+- **Docs:**
+  - README "Getting started": hooks install on `pnpm install`, and what each hook runs.
+  - README "Scripts": a `pnpm hooks:run` alias (`lefthook run pre-commit --all-files`) for a manual full run.
+  - `AGENTS.md`: agents must not use `--no-verify` or `LEFTHOOK=0`. If a hook fails, fix the cause.
+
+**Acceptance criteria:**
+
+1. A fresh clone plus `pnpm install` leaves `.git/hooks/pre-commit` and `pre-push` installed, with no extra step.
+2. Staging a `.ts` file with wrong quotes or semicolons, then committing, produces a commit whose content is correctly formatted. `pnpm format:check` passes right after.
+3. Staging a file with an oxlint error (e.g. `typescript/no-explicit-any`) blocks the commit, and the output names the file and rule.
+4. A type error in a committed file blocks `git push`, and `pnpm typecheck` shows the same error.
+5. A partially staged file (one hunk staged, one not) never has its unstaged hunk committed. Demonstrate it in the PR description.
+6. Staged `pnpm-lock.yaml` and `packages/db/drizzle/*` files are not reformatted.
+7. A commit touching only `docs/*.md` finishes in under ~1 s. `pre-commit` never runs the whole-repo `format:check` or `lint`.
+8. A commit that changes no files the hooks cover (e.g. only an image) succeeds, rather than failing on an empty file list.
+9. CI is unchanged: `pnpm check` is still the gate.
+
+**Dependencies:** none. It shares lefthook with P0-8 (see above). **Risk:** low.
+
+**Watch items:**
+
+- oxfmt is pre-1.0 and has broken on config before (D34 note). Pin its version, and re-check AC 2 and 6 on every oxfmt bump.
+- If pre-push typecheck gets slow as Phase 1 grows, consider scoping it to changed packages (`turbo --filter=...[origin/main]`) rather than dropping it.
 
 ## Phase 1 — HtAG Integration + Suburb Screener (Weeks 2–3)
 
