@@ -17,7 +17,7 @@
 | P0-1 | Monorepo scaffold | Turborepo + pnpm workspace with `apps/api` (NestJS), `apps/web` (Next.js), `apps/worker`, `packages/shared` (types, constants, Zod schemas). Shared tsconfig, lint, CI. |
 | P0-2 | Database setup | Postgres with TimescaleDB + pgvector enabled. Schema for `Users`, `Tenants`, `PurchaseTasks`, `Suburbs`. Migrations run on startup. `tenant_id` present everywhere. |
 | P0-3 | Auth integration | Clerk or Supabase Auth. JWT middleware in NestJS. Tenant resolution from the token. RLS policies applied. |
-| P0-4 | Redis + BullMQ wiring | `@nestjs/bullmq` registered. One test queue + `@Processor` that logs a job. Bull Board mounted at `/admin/queues`. |
+| P0-4 | Redis + BullMQ wiring | Redis in `docker-compose` (`noeviction`, AOF). `@nestjs/bullmq` registered in API (producer) and worker (consumer). `diagnostics` queue: authenticated `POST /api/diagnostics/jobs` enqueues a tenant-stamped payload (D49), worker `@Processor` parses and logs it. Bull Board at `/api/admin/queues` behind basic auth, dev only (D48). `GET /api/health/redis`. Identity cache moved to Redis (D50). **Done.** |
 | **P0-5** | **LangGraph.js HITL spike** | **Riskiest ticket — do this first.** Minimal graph, 3 nodes, one `interrupt()`. Postgres checkpointer via `PostgresSaver`. Verify: run pauses, thread status is `interrupted`, process can restart while paused, resume command continues from checkpoint, state survives. |
 | P0-6 | Next.js shell | Auth-gated routes, nav layout, empty task list, placeholder task detail. |
 

@@ -4,6 +4,7 @@ import type { ConfigService } from "@nestjs/config"
 import type { SQL } from "drizzle-orm"
 import { PgDialect } from "drizzle-orm/pg-core"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { InMemoryIdentityCache } from "./identity-cache"
 import { IdentityResolverService, type Identity } from "./identity-resolver.service"
 import type { UserDirectory } from "./user-directory"
 
@@ -75,7 +76,7 @@ function harness(): Harness {
 
 function build(state: Harness, directory: UserDirectory): IdentityResolverService {
   const config = { get: <T>(_key: string, fallback: T) => fallback } as unknown as ConfigService
-  return new IdentityResolverService(state.db, directory, config)
+  return new IdentityResolverService(state.db, directory, new InMemoryIdentityCache(), config)
 }
 
 function fakeDirectory(): UserDirectory & { fetch: ReturnType<typeof vi.fn> } {
@@ -134,7 +135,7 @@ describe("IdentityResolverService", () => {
       state.lookups.push(IDENTITY, IDENTITY)
 
       await service.resolve("user_2abc")
-      service.invalidate("user_2abc")
+      await service.invalidate("user_2abc")
       await service.resolve("user_2abc")
 
       expect(state.settings).toHaveLength(2)

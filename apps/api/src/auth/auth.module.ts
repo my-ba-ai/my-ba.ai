@@ -1,10 +1,13 @@
 import { Module, type Provider } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { APP_GUARD } from "@nestjs/core"
+import type { Redis } from "ioredis"
+import { REDIS_CLIENT } from "../redis/redis.tokens"
 import { AuthController } from "./auth.controller"
 import { AuthGuard } from "./auth.guard"
 import { AuthService } from "./auth.service"
-import { TOKEN_VERIFIER, USER_DIRECTORY } from "./auth.tokens"
+import { IDENTITY_CACHE, TOKEN_VERIFIER, USER_DIRECTORY } from "./auth.tokens"
+import { type IdentityCache, RedisIdentityCache } from "./identity-cache"
 import { IdentityResolverService } from "./identity-resolver.service"
 import { ClerkTokenVerifier, type TokenVerifier } from "./token-verifier"
 import { ClerkUserDirectory, type UserDirectory } from "./user-directory"
@@ -55,11 +58,18 @@ const directoryProvider: Provider = {
   },
 }
 
+const identityCacheProvider: Provider = {
+  provide: IDENTITY_CACHE,
+  inject: [REDIS_CLIENT],
+  useFactory: (redis: Redis): IdentityCache => new RedisIdentityCache(redis),
+}
+
 @Module({
   controllers: [AuthController],
   providers: [
     verifierProvider,
     directoryProvider,
+    identityCacheProvider,
     IdentityResolverService,
     AuthService,
     // Global. Every route is protected unless it carries @Public().

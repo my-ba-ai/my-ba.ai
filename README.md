@@ -10,7 +10,7 @@ investment property purchases. Product and architecture docs live in [`docs/`](.
 apps/
   api/        NestJS 11 — REST + BFF. Owns HTTP, auth, tenant routing.
   web/        Next.js 16 App Router + Tailwind v4.
-  worker/     NestJS standalone context — BullMQ processors (P0-4). Scales separately.
+  worker/     NestJS standalone context — BullMQ processors. Scales separately.
 packages/
   shared/     Zod schemas, domain types, queue names. The contract between all three apps.
   db/         Drizzle schema, migrations, pool factory, tenant-scoped transactions.

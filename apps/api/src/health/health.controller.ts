@@ -1,8 +1,9 @@
 import { Controller, Get, HttpCode, HttpStatus } from "@nestjs/common"
-import type { DatabaseHealthResponse, HealthResponse } from "@my-ba/shared"
+import type { DatabaseHealthResponse, HealthResponse, RedisHealthResponse } from "@my-ba/shared"
 import { Public } from "../auth/public.decorator"
 import { DatabaseHealthService } from "./database-health.service"
 import { HealthService } from "./health.service"
+import { RedisHealthService } from "./redis-health.service"
 
 /**
  * Public: an orchestrator probing liveness has no session token, and a
@@ -14,6 +15,7 @@ export class HealthController {
   constructor(
     private readonly health: HealthService,
     private readonly databaseHealth: DatabaseHealthService,
+    private readonly redisHealth: RedisHealthService,
   ) {}
 
   @Get()
@@ -30,5 +32,12 @@ export class HealthController {
   @HttpCode(HttpStatus.OK)
   async checkDatabase(): Promise<DatabaseHealthResponse> {
     return this.databaseHealth.check()
+  }
+
+  /** Same contract as `/health/db`: always 200, verdict in the payload. */
+  @Get("redis")
+  @HttpCode(HttpStatus.OK)
+  async checkRedis(): Promise<RedisHealthResponse> {
+    return this.redisHealth.check()
   }
 }

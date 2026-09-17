@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common"
 import { ConfigModule } from "@nestjs/config"
-import { HeartbeatService } from "./heartbeat/heartbeat.service"
+import { DiagnosticsModule } from "./diagnostics/diagnostics.module"
 
 @Module({
   imports: [
@@ -9,7 +9,7 @@ import { HeartbeatService } from "./heartbeat/heartbeat.service"
       cache: true,
       envFilePath: [".env.local", ".env"],
     }),
+    DiagnosticsModule,
   ],
-  providers: [HeartbeatService],
 })
 export class WorkerModule {}

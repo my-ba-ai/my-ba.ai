@@ -151,9 +151,18 @@ just in the schema.
 - **401s are deliberately vague.** The guard logs why verification failed and
   returns `Invalid or expired session token`. Telling a caller whether a token
   was malformed, expired or minted for another party is free reconnaissance.
-- **A role change takes up to the cache TTL to apply.** Accepted at one user.
-  When P0-4 lands Redis the cache moves there and invalidation becomes
-  cross-process.
+- **A role change takes up to the cache TTL to apply** unless
+  `IdentityResolverService.invalidate()` is called. Since P0-4 the cache is in
+  Redis (`my-ba:auth:identity:<clerk id>`, `PX` = `AUTH_IDENTITY_CACHE_TTL_MS`)
+  and shared by every API process, so one call invalidates everywhere (D50).
+- **Redis down means slower, not broken.** A cache read or write failure is
+  logged and treated as a miss; the lookup goes to Postgres. Only
+  `invalidate()` surfaces a Redis error, because a silently failed invalidation
+  leaves a stale role in place.
+- **Redis is inside the trust boundary.** Whoever can write the cache key
+  decides which tenant a Clerk id resolves to. Entries are Zod-parsed on read,
+  which stops garbage, not a well-formed forgery — so Redis must require auth
+  and be private outside local dev.
 - **No `AUTH_DISABLED` flag exists.** The API refuses to boot without
   `CLERK_JWT_KEY` or `CLERK_SECRET_KEY`, because a switch that turns the guard
   off is a switch that can be set in the wrong environment.

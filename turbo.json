@@ -5,7 +5,8 @@
     "NODE_ENV",
     "DATABASE_URL",
     "DATABASE_MIGRATION_URL",
-    "DATABASE_POOL_MAX"
+    "DATABASE_POOL_MAX",
+    "REDIS_URL"
   ],
   "globalPassThroughEnv": [
     "CI"

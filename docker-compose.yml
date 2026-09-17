@@ -1,4 +1,4 @@
-# Local development infrastructure (P0-2).
+# Local development infrastructure (Postgres: P0-2, Redis: P0-4).
 #
 # timescale/timescaledb-ha ships TimescaleDB *and* pgvector in one image, which
 # is what D24 asks for: a single Postgres instance, not three services.
@@ -28,5 +28,26 @@ services:
       timeout: 5s
       retries: 20
 
+  # BullMQ queues and the auth identity cache (P0-4).
+  #
+  # maxmemory-policy must be noeviction: under any eviction policy Redis may
+  # drop queue keys under memory pressure and jobs disappear without an error.
+  # AOF is on so queued jobs survive `docker compose restart`.
+  redis:
+    image: redis:7.4-alpine
+    container_name: my-ba-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
 volumes:
   postgres-data:
+  redis-data:
