@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common"
 import { databaseHealthResponseSchema, type DatabaseHealthResponse } from "@my-ba/shared"
 import type { DatabasePool } from "@my-ba/db"
-import { DATABASE_POOL } from "../database/database.module"
+import { DATABASE_POOL } from "../database/database.tokens"
 
 interface ExtensionRow {
   extname: string

@@ -2,7 +2,7 @@ import type { SQL } from "drizzle-orm"
 import { PgDialect } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
 import type { Database, TenantTransaction } from "./index"
-import { SYSTEM_TENANT_ID, withSystemTenant, withTenant } from "./index"
+import { AUTH_LOOKUP_SETTING, SYSTEM_TENANT_ID, withAuthLookup, withSystemTenant, withTenant } from "./index"
 
 const dialect = new PgDialect()
 
@@ -63,5 +63,45 @@ describe("withSystemTenant", () => {
 
     const { params } = dialect.sqlToQuery(executed[0] as SQL)
     expect(params).toEqual(["app.tenant_id", SYSTEM_TENANT_ID])
+  })
+})
+
+describe("withAuthLookup", () => {
+  it("sets the bootstrap setting transaction-locally", async () => {
+    const { db, executed } = fakeDb()
+
+    await withAuthLookup(db, "user_2abcDEF", async () => undefined)
+
+    const { sql, params } = dialect.sqlToQuery(executed[0] as SQL)
+    expect(sql).toContain("set_config")
+    expect(sql).toContain("true")
+    expect(params).toEqual([AUTH_LOOKUP_SETTING, "user_2abcDEF"])
+  })
+
+  /**
+   * The two wrappers must never both be in force. `app.tenant_id` stays unset
+   * here, so the only row this transaction can read is the one the bootstrap
+   * policy matches — the identity's own. If this ever started setting both,
+   * the lookup would silently gain a tenant's entire user list.
+   */
+  it("does not set a tenant", async () => {
+    const { db, executed } = fakeDb()
+
+    await withAuthLookup(db, "user_2abcDEF", async () => undefined)
+
+    expect(executed).toHaveLength(1)
+    const { params } = dialect.sqlToQuery(executed[0] as SQL)
+    expect(params).not.toContain("app.tenant_id")
+  })
+
+  it("returns the callback's value", async () => {
+    const { db } = fakeDb()
+    await expect(withAuthLookup(db, "user_2abcDEF", async () => "ok")).resolves.toBe("ok")
+  })
+
+  it("refuses an empty external auth id", async () => {
+    const { db, executed } = fakeDb()
+    await expect(withAuthLookup(db, "", async () => 1)).rejects.toThrow()
+    expect(executed).toHaveLength(0)
   })
 })

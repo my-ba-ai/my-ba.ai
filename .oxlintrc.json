@@ -1,6 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "import", "react", "jsx-a11y"],
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "import",
+    "react",
+    "jsx-a11y"
+  ],
   "categories": {
     "correctness": "error",
     "suspicious": "warn",
@@ -24,11 +30,23 @@
     "typescript/no-explicit-any": "error",
     "typescript/consistent-type-imports": "off",
     "unicorn/prefer-node-protocol": "error",
-    "unicorn/filename-case": ["error", { "case": "kebabCase" }]
+    "unicorn/filename-case": [
+      "error",
+      {
+        "case": "kebabCase"
+      }
+    ],
+    "react/react-in-jsx-scope": "off",
+    "typescript/no-extraneous-class": "off",
+    "no-unassigned-import":"off"
   },
   "overrides": [
     {
-      "files": ["**/*.spec.ts", "**/*.test.ts", "**/*.test.tsx"],
+      "files": [
+        "**/*.spec.ts",
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
       "rules": {
         "typescript/no-explicit-any": "off"
       }

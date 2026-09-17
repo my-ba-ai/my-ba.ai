@@ -13,9 +13,10 @@ import {
   type Database,
   type DatabasePool,
 } from "@my-ba/db"
+import { DATABASE, DATABASE_POOL } from "./database.tokens"
+import { TenantDatabaseService } from "./tenant-database.service"
 
-export const DATABASE = Symbol("DATABASE")
-export const DATABASE_POOL = Symbol("DATABASE_POOL")
+export { DATABASE, DATABASE_POOL } from "./database.tokens"
 
 const poolProvider: Provider = {
   provide: DATABASE_POOL,
@@ -50,8 +51,8 @@ const databaseProvider: Provider = {
  */
 @Global()
 @Module({
-  providers: [poolProvider, databaseProvider],
-  exports: [DATABASE, DATABASE_POOL],
+  providers: [poolProvider, databaseProvider, TenantDatabaseService],
+  exports: [DATABASE, DATABASE_POOL, TenantDatabaseService],
 })
 export class DatabaseModule implements OnApplicationShutdown {
   private readonly logger = new Logger(DatabaseModule.name)

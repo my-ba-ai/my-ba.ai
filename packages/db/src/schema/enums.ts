@@ -1,4 +1,4 @@
-import { AGENT_TYPES, TASK_STATUS_ORDER } from "@my-ba/shared"
+import { AGENT_TYPES, TASK_STATUS_ORDER, USER_ROLES } from "@my-ba/shared"
 import { pgEnum } from "drizzle-orm/pg-core"
 
 /**
@@ -10,9 +10,8 @@ export const taskStatus = pgEnum("task_status", [...TASK_STATUS_ORDER])
 
 export const agentType = pgEnum("agent_type", [...AGENT_TYPES])
 
-/** docs/03-domain-model.md — Users.role */
-export const USER_ROLES = ["investor", "agent", "admin"] as const
-export const userRole = pgEnum("user_role", USER_ROLES)
+/** docs/03-domain-model.md — Users.role. Values owned by `@my-ba/shared`, like the two above. */
+export const userRole = pgEnum("user_role", [...USER_ROLES])
 
 /** Australian states and territories. Eight of them, and that will not change. */
 export const AU_STATES = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"] as const

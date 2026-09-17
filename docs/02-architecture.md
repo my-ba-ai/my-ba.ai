@@ -56,8 +56,8 @@ A **modular monolith** with clean domain boundaries (tasks, suburbs, agents, lis
 | Orchestration | LangGraph.js + PostgresSaver | Chosen for built-in `interrupt()` / checkpoint / resume — exactly the HITL primitive needed |
 | Queue | Redis + BullMQ (`@nestjs/bullmq`) | Job Schedulers handle the weekly suburb refresh; Bull Board for monitoring |
 | DB | PostgreSQL + TimescaleDB + pgvector | One instance. Hypertable for suburb metrics time-series; pgvector for agent memory |
-| ORM | Drizzle (leaning) or Prisma | Drizzle wins if we write raw TimescaleDB/hypertable queries, which we will |
-| Auth | Clerk or Supabase Auth | JWT, email/password + magic link |
+| ORM | Drizzle (D33, LOCKED) | Wins on hypertables + pgvector; no parallel migration systems to keep in sync |
+| Auth | Clerk (D41, LOCKED) | Clerk owns credentials, sessions, MFA. `users` mirrors it via `external_auth_id`. Flow: `08-auth-flow.md` |
 | Object store | Cloudflare R2 | Scrape dumps, exports, later PDFs |
 | Email | Resend or SendGrid | Platform-sent outreach, Spam Act compliance in the send path |
 | Hosting | Railway or Render, Sydney region | Single region for MVP |

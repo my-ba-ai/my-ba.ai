@@ -1,8 +1,14 @@
 import { Controller, Get, HttpCode, HttpStatus } from "@nestjs/common"
 import type { DatabaseHealthResponse, HealthResponse } from "@my-ba/shared"
+import { Public } from "../auth/public.decorator"
 import { DatabaseHealthService } from "./database-health.service"
 import { HealthService } from "./health.service"
 
+/**
+ * Public: an orchestrator probing liveness has no session token, and a
+ * readiness check that fails closed behind auth reports the wrong thing.
+ */
+@Public()
 @Controller("health")
 export class HealthController {
   constructor(

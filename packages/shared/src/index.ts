@@ -1,5 +1,7 @@
 export * from "./constants"
 export * from "./domain/task-status"
 export * from "./domain/agent-type"
+export * from "./domain/user-role"
+export * from "./schemas/auth"
 export * from "./schemas/database-health"
 export * from "./schemas/health"

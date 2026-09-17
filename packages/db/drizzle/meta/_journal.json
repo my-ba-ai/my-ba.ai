@@ -57,6 +57,13 @@
       "when": 1789446816686,
       "tag": "0007_hard_vulcan",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789447754822,
+      "tag": "0008_auth_bootstrap",
+      "breakpoints": true
     }
   ]
 }

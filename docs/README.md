@@ -12,6 +12,7 @@ Upload every file here to a Claude Project's knowledge base. Paste `00-PROJECT-I
 | `05-roadmap-and-phases.md` | MVP boundary, phases, tickets, critical path | Every phase |
 | `06-data-sources.md` | Providers, rejected options, cost control, compliance | When a source changes |
 | `07-design-brief.md` | Design direction + screen prompts for Claude Design | Per design pass |
+| `08-auth-flow.md` | Auth sequence diagrams, the two tenant GUCs, failure modes | When auth changes |
 
 ## Maintenance rule
 

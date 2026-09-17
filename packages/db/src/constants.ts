@@ -23,3 +23,26 @@ export const TENANT_SETTING = "app.tenant_id"
  * deploys racing each other queue instead of interleaving DDL.
  */
 export const MIGRATION_ADVISORY_LOCK_KEY = 4_170_002
+
+/**
+ * Transaction-local GUC for exactly one job: resolving a Clerk identity to its
+ * tenant before any tenant is known (D46).
+ *
+ * Tenant-per-user resolution is a chicken-and-egg problem against D26. The
+ * lookup is `where external_auth_id = $1`, but the RLS policy on `users` is
+ * `tenant_id = current_tenant_id()`, and at that point in the request there is
+ * no tenant yet — so the query matches nothing, always.
+ *
+ * The escape reuses the mechanism already in place rather than inventing one:
+ * a second transaction-local setting, and a SELECT-only policy on `users` that
+ * reveals the single row whose `external_auth_id` equals it. No SECURITY
+ * DEFINER function, no role with BYPASSRLS, no second copy of the mapping in a
+ * table with RLS switched off — all three were considered and are written up
+ * in D46. Nothing in the codebase holds a privilege it would not otherwise
+ * have; the policy widens by one row, for a caller who already proved it holds
+ * that Clerk id by presenting a signed token.
+ *
+ * SELECT only, deliberately. Writes still go through `users_isolation`, so this
+ * setting cannot be used to insert or update across tenants.
+ */
+export const AUTH_LOOKUP_SETTING = "app.bootstrap_auth_id"

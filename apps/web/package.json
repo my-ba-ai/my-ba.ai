@@ -12,10 +12,12 @@
     "clean": "rm -rf .next .turbo *.tsbuildinfo"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.0.0",
     "@my-ba/shared": "workspace:*",
     "next": "^16.3.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@my-ba/config": "workspace:*",

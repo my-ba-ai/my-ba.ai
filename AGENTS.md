@@ -29,6 +29,20 @@ the first thing to read before proposing anything architectural.
   security unconditionally, so a superuser connection makes every policy in the
   schema inert — and with one tenant in the database, nothing looks wrong.
   Apps use `DATABASE_URL` (`my_ba_app`); migrations use `DATABASE_MIGRATION_URL`.
+- **DI tokens live in a `*.tokens.ts` file, never on the module that provides
+  them.** A provider declared by a module must not import that module to get its
+  token — Node hands one side a half-initialised namespace and Nest reports a
+  `CircularDependencyException` at boot, naming the module rather than the
+  import. See `auth/auth.tokens.ts` and `database/database.tokens.ts`. Unit tests
+  do not catch this; they construct services directly and never build the module graph.
+- **The tenant comes from the token, never from the request** (D45). The guard
+  resolves it by looking the Clerk id up in `users` and puts it on `request.auth`.
+  A header, query parameter or body field naming a tenant is not consulted and
+  must never be. Handlers reach the database through `TenantDatabaseService.run(auth, fn)`.
+- **`withAuthLookup()` is for exactly one query** (D46) — resolving a verified
+  Clerk id to its tenant, before a tenant exists to scope by. It sets
+  `app.bootstrap_auth_id`, and the policy it relies on is `FOR SELECT` only. Do
+  not reach for it anywhere else; everything after resolution is `withTenant`.
 - **Every query runs inside `withTenant()`** (`packages/db/src/tenant.ts`), which
   sets `app.tenant_id` transaction-locally. Outside it the app role sees an empty
   database. That is the design: a query that forgets its tenant returns nothing
@@ -56,6 +70,10 @@ pnpm db:generate  # schema change -> new migration (never hand-write CREATE TABL
 pnpm db:migrate   # apply migrations. Explicit, never on app startup (D39)
 ```
 
+The API refuses to boot without `CLERK_JWT_KEY` or `CLERK_SECRET_KEY` (see
+`apps/api/.env.example`). There is deliberately no flag that turns the guard off,
+because a flag that turns the guard off can be set in the wrong environment.
+
 `pnpm db:bootstrap` is a one-time command that created the initial migration
 set. It is a no-op once `packages/db/drizzle/meta/_journal.json` exists.
 
@@ -74,7 +92,7 @@ copy `apps/api/vitest.config.ts` rather than writing a fresh one.
 ## Where things are going
 
 Phase order and ticket acceptance criteria are in `docs/05-roadmap-and-phases.md`.
-P0-1 (scaffold) and P0-2 (database) are done. P0-5 — the LangGraph.js durable-interrupt spike — is
+P0-1 (scaffold), P0-2 (database) and P0-3 (auth) are done. P0-5 — the LangGraph.js durable-interrupt spike — is
 the gate ticket: if it fails, the orchestrator design changes and Phase 1 waits.
 Keep the orchestrator behind the narrow `runStage(taskId, stage) -> StageResult`
 interface so it stays swappable.
