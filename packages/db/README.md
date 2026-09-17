@@ -40,10 +40,10 @@ Editing an already-applied migration breaks its checksum; write a new one.
 
 ## Two roles, on purpose
 
-| Connection | Role | Used by |
-| --- | --- | --- |
-| `DATABASE_URL` | `my_ba_app` — NOSUPERUSER, NOBYPASSRLS | apps/api, apps/worker |
-| `DATABASE_MIGRATION_URL` | schema owner | `pnpm db:migrate`, drizzle-kit |
+| Connection               | Role                                   | Used by                        |
+| ------------------------ | -------------------------------------- | ------------------------------ |
+| `DATABASE_URL`           | `my_ba_app` — NOSUPERUSER, NOBYPASSRLS | apps/api, apps/worker          |
+| `DATABASE_MIGRATION_URL` | schema owner                           | `pnpm db:migrate`, drizzle-kit |
 
 Postgres RLS is bypassed by superusers unconditionally. If the app connected as
 `postgres`, every tenant policy would be inert and, with one tenant in the
@@ -53,9 +53,7 @@ so this fails loudly instead of silently (D40).
 ## Tenant scoping
 
 ```ts
-const tasks = await withTenant(db, tenantId, async (tx) =>
-  tx.select().from(purchaseTasks),
-)
+const tasks = await withTenant(db, tenantId, async (tx) => tx.select().from(purchaseTasks))
 ```
 
 `withTenant` sets `app.tenant_id` **transaction-locally**. A pooled connection

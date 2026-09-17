@@ -12,14 +12,14 @@
 
 **Goal:** skeleton monorepo, auth working, DB migrated, empty task list rendering, and the orchestration risk retired.
 
-| Ticket | Description | Acceptance criteria |
-|---|---|---|
-| P0-1 | Monorepo scaffold | Turborepo + pnpm workspace with `apps/api` (NestJS), `apps/web` (Next.js), `apps/worker`, `packages/shared` (types, constants, Zod schemas). Shared tsconfig, lint, CI. |
-| P0-2 | Database setup | Postgres with TimescaleDB + pgvector enabled. Schema for `Users`, `Tenants`, `PurchaseTasks`, `Suburbs`. Migrations run on startup. `tenant_id` present everywhere. |
-| P0-3 | Auth integration | Clerk or Supabase Auth. JWT middleware in NestJS. Tenant resolution from the token. RLS policies applied. |
-| P0-4 | Redis + BullMQ wiring | Redis in `docker-compose` (`noeviction`, AOF). `@nestjs/bullmq` registered in API (producer) and worker (consumer). `diagnostics` queue: authenticated `POST /api/diagnostics/jobs` enqueues a tenant-stamped payload (D49), worker `@Processor` parses and logs it. Bull Board at `/api/admin/queues` behind basic auth, dev only (D48). `GET /api/health/redis`. Identity cache moved to Redis (D50). **Done.** |
-| **P0-5** | **LangGraph.js HITL spike** | **Riskiest ticket — do this first.** Minimal graph, 3 nodes, one `interrupt()`. Postgres checkpointer via `PostgresSaver`. Verify: run pauses, thread status is `interrupted`, process can restart while paused, resume command continues from checkpoint, state survives. |
-| P0-6 | Next.js shell | Auth-gated routes, nav layout, empty task list, placeholder task detail. |
+| Ticket   | Description                 | Acceptance criteria                                                                                                                                                                                                                                                                                                                                                                                               |
+| -------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0-1     | Monorepo scaffold           | Turborepo + pnpm workspace with `apps/api` (NestJS), `apps/web` (Next.js), `apps/worker`, `packages/shared` (types, constants, Zod schemas). Shared tsconfig, lint, CI.                                                                                                                                                                                                                                           |
+| P0-2     | Database setup              | Postgres with TimescaleDB + pgvector enabled. Schema for `Users`, `Tenants`, `PurchaseTasks`, `Suburbs`. Migrations run on startup. `tenant_id` present everywhere.                                                                                                                                                                                                                                               |
+| P0-3     | Auth integration            | Clerk or Supabase Auth. JWT middleware in NestJS. Tenant resolution from the token. RLS policies applied.                                                                                                                                                                                                                                                                                                         |
+| P0-4     | Redis + BullMQ wiring       | Redis in `docker-compose` (`noeviction`, AOF). `@nestjs/bullmq` registered in API (producer) and worker (consumer). `diagnostics` queue: authenticated `POST /api/diagnostics/jobs` enqueues a tenant-stamped payload (D49), worker `@Processor` parses and logs it. Bull Board at `/api/admin/queues` behind basic auth, dev only (D48). `GET /api/health/redis`. Identity cache moved to Redis (D50). **Done.** |
+| **P0-5** | **LangGraph.js HITL spike** | **Riskiest ticket — do this first.** Minimal graph, 3 nodes, one `interrupt()`. Postgres checkpointer via `PostgresSaver`. Verify: run pauses, thread status is `interrupted`, process can restart while paused, resume command continues from checkpoint, state survives.                                                                                                                                        |
+| P0-6     | Next.js shell               | Auth-gated routes, nav layout, empty task list, placeholder task detail.                                                                                                                                                                                                                                                                                                                                          |
 
 **Deliverable:** I can log in, see an empty task list, and pause/resume is proven end-to-end.
 
@@ -36,12 +36,14 @@ Governing decisions: D16–D19, D37–D44.
 ### P1-0 — Schema delta for HtAG data shape
 
 **Description:** Drizzle schema change + generated migration (no hand-written DDL).
+
 - `SuburbMetricsTS`: time column holds HtAG `period_end` (rename to `measured_at` if P0-2 named it `timestamp`); add `property_type text not null` (check `'house' | 'unit'`), `bedrooms text not null default 'All'`, `confidence text null`, `source text not null default 'htag'`; unique index `(suburb_id, property_type, bedrooms, metric_name, measured_at)`.
 - `Suburbs`: add `htag_area_id text unique` (HtAG `loc_pid`, e.g. `QLD2659`), `abs_sal_code text null`.
 - New `htag_calls`: `id, tenant_id, task_id null, analysis_step_id null, endpoint, request_json, rows_returned, tier, cost_aud numeric(10,4), status_code, created_at`.
 - `ScreeningResults.score_breakdown_json` shape documented as `Ranked` (P1-8).
 
 **Acceptance criteria:**
+
 1. Migration generated from Drizzle schema and applies cleanly on a fresh DB and on the P0-2 DB.
 2. Unique index accepted by TimescaleDB (includes time column).
 3. Upserting the same `(suburb, property_type, bedrooms, metric, measured_at)` twice leaves one row.
@@ -58,6 +60,7 @@ Governing decisions: D16–D19, D37–D44.
 **Zod row schemas:** `HtagQueryRecord`, `HtagSummaryRow`, `HtagSomRow`, `HtagDomRow`, trend rows for price/rent/yield. All metric fields nullable. DOM `0` normalised to `null` at the boundary (Q13).
 
 **Acceptance criteria:**
+
 1. Contract tests run against recorded fixtures (no live key in CI).
 2. Pagination test: 3 pages (100, 100, 37) returns 237 rows; stops on short page, never uses `total`.
 3. Each error class raised from a fixture of the corresponding status.
@@ -67,13 +70,14 @@ Governing decisions: D16–D19, D37–D44.
 
 **Dependencies:** P0-1, P1-0. **Risk:** low.
 
-### P1-2 — *Retired*
+### P1-2 — _Retired_
 
 Folded into P1-4 (on-demand trend hydration). The scheduled national refresh worker is no longer needed (D27 superseded by D40/D42). ID not reused.
 
 ### P1-3 — Investor profile + criteria schema + form
 
 **Description:** `CriteriaSchema` (Zod) in `packages/shared`, saved to `purchase_tasks.criteria_json`, compiled to HtAG `logic` by pure `compileToHtagLogic`. Next.js 3-step form (React Hook Form + Zod resolver):
+
 1. **Strategy & risk** — strategy (growth / cashflow / balanced), risk (low / medium / high), task name, target states, property type. Selecting both prefills filters and weights from the preset (P1-8).
 2. **Criteria** — toggleable filters: typical price range, gross yield % range, vacancy rate % max, stock on market % max, days on market max, annual sales volume min, IRSAD decile min, high-confidence-only (default on). Collapsible "Customise ranking weights" panel (sliders, normalised to 1 on save).
 3. **Review** — criteria + profile summary, preset badge (with "custom" flags), estimated HtAG cost ceiling, "Create Task & Run Screening" / "Save as Draft".
@@ -81,6 +85,7 @@ Folded into P1-4 (on-demand trend hydration). The scheduled national refresh wor
 Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, filtersCustomised }`. Percent inputs converted to fractions in `compileToHtagLogic`, not in the form.
 
 **Acceptance criteria:**
+
 1. `CriteriaSchema` rejects inverted ranges, empty `states`, unknown keys, and invalid weights (P1-8 `Weights`).
 2. `compileToHtagLogic` snapshot-tested: every filter, percent→fraction scaling, all filters off (bedrooms + state + confidence leaves only).
 3. Editing any preset-prefilled filter sets `filtersCustomised`; editing any weight sets `weightsCustomised`. Switching preset after edits requires confirmation.
@@ -94,6 +99,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 ### P1-4 — Suburb Screener node
 
 **Description:** LangGraph node. Steps:
+
 1. Compile criteria → `POST /markets/query`, `limit` from config (`SCREEN_QUERY_LIMIT`, default 100).
 2. If returned == limit → `interrupt({ type: 'SCREENING_TOO_BROAD', criteria, returned })`. No further calls.
 3. Upsert returned areas into `Suburbs` (by `htag_area_id`).
@@ -105,6 +111,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 9. `interrupt({ type: 'SCREENING_APPROVAL', criteria, rankedSuburbs, costAud })`.
 
 **Acceptance criteria:**
+
 1. Returned == limit → too-broad interrupt; mocked client asserts zero trends calls.
 2. Zero results → approval interrupt with empty list and `costAud` 0, not an error.
 3. Cached trend rows for the current period are not re-fetched (mocked client asserts reduced `area_id` list).
@@ -119,10 +126,12 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 ### P1-5 — Approval UI
 
 **Description:** Renders both interrupt payloads.
+
 - `SCREENING_APPROVAL`: ranked table (rank, suburb + state, score bar, yield, price momentum, rent momentum, renter share, insufficient-data badge), exclude-with-undo, criteria + profile summary with preset badge and custom flags, HtAG cost for the step, Approve & Continue / Reject & Adjust. Resumes via API endpoint.
 - `SCREENING_TOO_BROAD`: explains the result hit the cap and is truncated/unordered; shows current filters with suggestions to tighten; "Adjust Criteria & Re-run" only (no approve).
 
 **Acceptance criteria:**
+
 1. Too-broad state offers no approve action.
 2. `insufficientData` rows visually distinct and sorted last (as delivered by P1-8).
 3. HtAG attribution + disclaimer present (P1-9).
@@ -143,6 +152,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 **Description:** Sortable, filterable, paginated table with density toggle and score breakdown. Suburb detail drawer shows: our ranking factors as bars (raw value + percentile + weight + contribution from `Ranked.breakdown`); server-side filter criteria as pass chips (values not available — D42); restricted metrics if hydrated (top N); explicit "Load supply detail" button for other suburbs showing estimated cost before fetching (**provisional pending Q19**).
 
 **Acceptance criteria:**
+
 1. Drawer never renders a numeric value for a filter-only metric it doesn't have.
 2. "Load supply detail" confirms cost, calls P1-1, persists to cache, records `htag_calls` against the task.
 3. HtAG attribution present (P1-9).
@@ -153,19 +163,20 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 
 **Description:** `packages/domain/src/ranking/` — `presets.ts` (`Strategy`, `RiskTolerance`, `FactorId`, `Weights`, `PRESET_VERSION`, `presetWeights`, preset filter defaults) and `rank.ts` (`RawMetrics`, `rankSuburbs`, `percentileRanks`). No I/O, no LLM, no HtAG proprietary scores (D39, D44). Presets per D17/D19:
 
-| Strategy | Base weights | Filter defaults |
-|---|---|---|
-| Growth | price_mom_6m 0.45 · rent_mom_6m 0.20 · owner_share 0.25 · yield_now 0.10 | — |
-| Cashflow | yield_now 0.50 · rent_mom_6m 0.30 · renter_share 0.15 · price_mom_6m 0.05 | yield ≥ 4.5% |
-| Balanced | yield_now 0.30 · price_mom_6m 0.30 · rent_mom_6m 0.30 · renter_share 0.10 | yield ≥ 3.5% |
+| Strategy | Base weights                                                              | Filter defaults |
+| -------- | ------------------------------------------------------------------------- | --------------- |
+| Growth   | price_mom_6m 0.45 · rent_mom_6m 0.20 · owner_share 0.25 · yield_now 0.10  | —               |
+| Cashflow | yield_now 0.50 · rent_mom_6m 0.30 · renter_share 0.15 · price_mom_6m 0.05 | yield ≥ 4.5%    |
+| Balanced | yield_now 0.30 · price_mom_6m 0.30 · rent_mom_6m 0.30 · renter_share 0.10 | yield ≥ 3.5%    |
 
-| Risk | low_volatility weight (base scaled by 1 − w) | Filter defaults |
-|---|---|---|
-| Low | 0.25 | confidence High · IRSAD ≥ 5 · vacancy ≤ 1.5% · sales ≥ 100/yr |
-| Medium | 0.10 | confidence High · IRSAD ≥ 3 · vacancy ≤ 2.5% · sales ≥ 50/yr |
-| High | 0 | confidence any · vacancy ≤ 4% · sales ≥ 20/yr |
+| Risk   | low_volatility weight (base scaled by 1 − w) | Filter defaults                                               |
+| ------ | -------------------------------------------- | ------------------------------------------------------------- |
+| Low    | 0.25                                         | confidence High · IRSAD ≥ 5 · vacancy ≤ 1.5% · sales ≥ 100/yr |
+| Medium | 0.10                                         | confidence High · IRSAD ≥ 3 · vacancy ≤ 2.5% · sales ≥ 50/yr  |
+| High   | 0                                            | confidence any · vacancy ≤ 4% · sales ≥ 20/yr                 |
 
 **Acceptance criteria:**
+
 1. `presetWeights` sums to 1 (±1e-9) for all 9 combinations; snapshot-tested.
 2. `percentileRanks` handles ties (average rank), n = 1 (0.5), all-undefined.
 3. Disabled factor → remaining weights renormalise; coverage not penalised.
@@ -181,6 +192,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 **Description:** Design-system component rendering "Powered by HtAG Analytics" linked to `https://developer.htagai.com` plus the not-financial-advice disclaimer (D38). Used on every view showing HtAG-derived data.
 
 **Acceptance criteria:**
+
 1. Legible, not materially less prominent than surrounding content, in the same view as the data (cl. 39(c)).
 2. Present on P1-5, P1-7, and the Phase 2 report view.
 3. Visual regression snapshot.
@@ -192,6 +204,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 **Description:** One-off + annual BullMQ job loading 2021 Census tenure data (renter proportion per suburb) into Postgres, joined to `Suburbs` via ABS SAL code ↔ HtAG `loc_pid` concordance. Pulled forward from Phase 2 (tenure only; rest of ABS ETL stays in Phase 2).
 
 **Acceptance criteria:**
+
 1. Renter proportion available for ≥ 95% of suburbs returned by a representative screen fixture.
 2. Concordance source recorded. **Check before build:** which Census DataPack table holds tenure at SAL level, and whether HtAG's Concordance endpoints (Reference tier) or ABS correspondence files provide SAL ↔ `loc_pid` mapping.
 3. Idempotent re-run.

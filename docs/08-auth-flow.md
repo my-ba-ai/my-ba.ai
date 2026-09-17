@@ -104,10 +104,10 @@ Both are transaction-local (`set_config(..., true)`), never session-level — a
 pooled connection outlives the request, so a session GUC would leak one tenant's
 scope into the next query on that socket.
 
-| Setting | Set by | Policy it drives | Visible rows | Allows writes |
-|---|---|---|---|---|
-| `app.tenant_id` | `withTenant()` | `users_isolation`, `tenants_isolation`, `purchase_tasks_isolation`, `suburbs_*` | everything owned by that tenant | yes |
-| `app.bootstrap_auth_id` | `withAuthLookup()` | `users_auth_bootstrap` | exactly one `users` row, matched by `external_auth_id` | **no** — the policy is `FOR SELECT` |
+| Setting                 | Set by             | Policy it drives                                                                | Visible rows                                           | Allows writes                       |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------- |
+| `app.tenant_id`         | `withTenant()`     | `users_isolation`, `tenants_isolation`, `purchase_tasks_isolation`, `suburbs_*` | everything owned by that tenant                        | yes                                 |
+| `app.bootstrap_auth_id` | `withAuthLookup()` | `users_auth_bootstrap`                                                          | exactly one `users` row, matched by `external_auth_id` | **no** — the policy is `FOR SELECT` |
 
 `withAuthLookup` exists for one query in the whole system: turning a verified
 Clerk id into a tenant, before a tenant exists to scope by. Everything after
@@ -123,17 +123,17 @@ query that loses its scope returns nothing rather than everything.
 
 ## Where each piece lives
 
-| Concern | File |
-|---|---|
-| Session available to server components | `apps/web/src/proxy.ts` |
-| Token attached to API calls | `apps/web/src/lib/api-client.ts` |
-| Route protection (global, opt-out) | `apps/api/src/auth/auth.guard.ts` + `public.decorator.ts` |
-| Token verification, swappable | `apps/api/src/auth/token-verifier.ts` |
-| Profile read at provisioning, swappable | `apps/api/src/auth/user-directory.ts` |
-| Resolution, JIT provisioning, cache | `apps/api/src/auth/identity-resolver.service.ts` |
-| The only sanctioned way to query | `apps/api/src/database/tenant-database.service.ts` |
-| GUC wrappers | `packages/db/src/tenant.ts` |
-| Policies | `packages/db/sql/rls.sql`, `packages/db/sql/auth-bootstrap.sql` |
+| Concern                                 | File                                                            |
+| --------------------------------------- | --------------------------------------------------------------- |
+| Session available to server components  | `apps/web/src/proxy.ts`                                         |
+| Token attached to API calls             | `apps/web/src/lib/api-client.ts`                                |
+| Route protection (global, opt-out)      | `apps/api/src/auth/auth.guard.ts` + `public.decorator.ts`       |
+| Token verification, swappable           | `apps/api/src/auth/token-verifier.ts`                           |
+| Profile read at provisioning, swappable | `apps/api/src/auth/user-directory.ts`                           |
+| Resolution, JIT provisioning, cache     | `apps/api/src/auth/identity-resolver.service.ts`                |
+| The only sanctioned way to query        | `apps/api/src/database/tenant-database.service.ts`              |
+| GUC wrappers                            | `packages/db/src/tenant.ts`                                     |
+| Policies                                | `packages/db/sql/rls.sql`, `packages/db/sql/auth-bootstrap.sql` |
 
 `TokenVerifier` and `UserDirectory` are interfaces behind DI tokens so the guard
 never imports `@clerk/backend` directly. That is what makes D41's claim — the

@@ -21,9 +21,9 @@ describe("decideBullBoard", () => {
   })
 
   it("skips quietly when neither credential is set", () => {
-    expect(
-      decideBullBoard({ nodeEnv: "development", user: undefined, password: "" }).mount,
-    ).toBe(false)
+    expect(decideBullBoard({ nodeEnv: "development", user: undefined, password: "" }).mount).toBe(
+      false,
+    )
   })
 
   it("refuses to boot when half-configured", () => {

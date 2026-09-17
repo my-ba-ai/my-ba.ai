@@ -7,14 +7,14 @@ the first thing to read before proposing anything architectural.
 
 ## Repo shape
 
-| Path | What it is |
-|---|---|
-| `apps/api` | NestJS 11 — REST + BFF. HTTP, auth, tenant routing. |
-| `apps/web` | Next.js 16 App Router + Tailwind v4. Has its own `AGENTS.md`. |
-| `apps/worker` | NestJS standalone context — BullMQ processors. Scales independently of the API. |
-| `packages/db` | Drizzle schema, migrations, pool factory, tenant-scoped transaction wrapper. |
+| Path              | What it is                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| `apps/api`        | NestJS 11 — REST + BFF. HTTP, auth, tenant routing.                                  |
+| `apps/web`        | Next.js 16 App Router + Tailwind v4. Has its own `AGENTS.md`.                        |
+| `apps/worker`     | NestJS standalone context — BullMQ processors. Scales independently of the API.      |
+| `packages/db`     | Drizzle schema, migrations, pool factory, tenant-scoped transaction wrapper.         |
 | `packages/shared` | Zod schemas, domain types, queue names. The contract all three apps compile against. |
-| `packages/config` | Shared tsconfig presets: `base` / `lib` / `nest` / `next`. |
+| `packages/config` | Shared tsconfig presets: `base` / `lib` / `nest` / `next`.                           |
 
 ## Rules that are not negotiable
 

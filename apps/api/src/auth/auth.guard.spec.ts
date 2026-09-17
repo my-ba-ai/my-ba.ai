@@ -40,8 +40,7 @@ function build(options: {
 
   const verifier: TokenVerifier = {
     verify:
-      options.verify ??
-      vi.fn(async () => ({ sub: "user_2abc", sid: "sess_1", iat: 0, exp: 0 })),
+      options.verify ?? vi.fn(async () => ({ sub: "user_2abc", sid: "sess_1", iat: 0, exp: 0 })),
   }
 
   const identities = {

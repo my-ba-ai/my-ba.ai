@@ -39,7 +39,10 @@ function isUniqueViolation(error: unknown): boolean {
 /** `brian@example.com` -> `brian-3f2a91cc`. Unique because the suffix is. */
 function tenantSlug(email: string, tenantId: string): string {
   const local = email.split("@")[0] ?? "tenant"
-  const base = local.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+  const base = local
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
   return `${base.length > 0 ? base : "tenant"}-${tenantId.replaceAll("-", "").slice(0, 8)}`
 }
 

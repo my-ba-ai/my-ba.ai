@@ -48,19 +48,19 @@ A **modular monolith** with clean domain boundaries (tasks, suburbs, agents, lis
 
 ## Stack
 
-| Component | Choice | Notes |
-|---|---|---|
-| Repo | Turborepo + pnpm workspaces | `apps/api`, `apps/web`, `apps/worker`, `packages/shared` |
-| Backend | NestJS (TypeScript) | Opinionated modules + DI map cleanly to domain boundaries |
-| Frontend | Next.js (App Router) | |
-| Orchestration | LangGraph.js + PostgresSaver | Chosen for built-in `interrupt()` / checkpoint / resume — exactly the HITL primitive needed |
-| Queue | Redis + BullMQ (`@nestjs/bullmq`) | Job Schedulers handle the weekly suburb refresh; Bull Board for monitoring |
-| DB | PostgreSQL + TimescaleDB + pgvector | One instance. Hypertable for suburb metrics time-series; pgvector for agent memory |
-| ORM | Drizzle (D33, LOCKED) | Wins on hypertables + pgvector; no parallel migration systems to keep in sync |
-| Auth | Clerk (D41, LOCKED) | Clerk owns credentials, sessions, MFA. `users` mirrors it via `external_auth_id`. Flow: `08-auth-flow.md` |
-| Object store | Cloudflare R2 | Scrape dumps, exports, later PDFs |
-| Email | Resend or SendGrid | Platform-sent outreach, Spam Act compliance in the send path |
-| Hosting | Railway or Render, Sydney region | Single region for MVP |
+| Component     | Choice                              | Notes                                                                                                     |
+| ------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Repo          | Turborepo + pnpm workspaces         | `apps/api`, `apps/web`, `apps/worker`, `packages/shared`                                                  |
+| Backend       | NestJS (TypeScript)                 | Opinionated modules + DI map cleanly to domain boundaries                                                 |
+| Frontend      | Next.js (App Router)                |                                                                                                           |
+| Orchestration | LangGraph.js + PostgresSaver        | Chosen for built-in `interrupt()` / checkpoint / resume — exactly the HITL primitive needed               |
+| Queue         | Redis + BullMQ (`@nestjs/bullmq`)   | Job Schedulers handle the weekly suburb refresh; Bull Board for monitoring                                |
+| DB            | PostgreSQL + TimescaleDB + pgvector | One instance. Hypertable for suburb metrics time-series; pgvector for agent memory                        |
+| ORM           | Drizzle (D33, LOCKED)               | Wins on hypertables + pgvector; no parallel migration systems to keep in sync                             |
+| Auth          | Clerk (D41, LOCKED)                 | Clerk owns credentials, sessions, MFA. `users` mirrors it via `external_auth_id`. Flow: `08-auth-flow.md` |
+| Object store  | Cloudflare R2                       | Scrape dumps, exports, later PDFs                                                                         |
+| Email         | Resend or SendGrid                  | Platform-sent outreach, Spam Act compliance in the send path                                              |
+| Hosting       | Railway or Render, Sydney region    | Single region for MVP                                                                                     |
 
 ## Key design decisions and why
 
@@ -76,19 +76,19 @@ A **modular monolith** with clean domain boundaries (tasks, suburbs, agents, lis
 
 ## Scaling path
 
-| Stage | Architecture | Trigger to move |
-|---|---|---|
-| MVP (single user) | Modular monolith, one VM, managed Postgres + Redis | — |
-| Early users | Same monolith, horizontal scaling, read replicas | >100 concurrent users |
-| Growth | Extract AI orchestration into its own service (bursty, different scaling profile) | >100 agent runs/day |
-| Scale | Extract ingestion into event-driven pipelines; extract agent marketplace | Refresh frequency and agent registrations grow |
+| Stage             | Architecture                                                                      | Trigger to move                                |
+| ----------------- | --------------------------------------------------------------------------------- | ---------------------------------------------- |
+| MVP (single user) | Modular monolith, one VM, managed Postgres + Redis                                | —                                              |
+| Early users       | Same monolith, horizontal scaling, read replicas                                  | >100 concurrent users                          |
+| Growth            | Extract AI orchestration into its own service (bursty, different scaling profile) | >100 agent runs/day                            |
+| Scale             | Extract ingestion into event-driven pipelines; extract agent marketplace          | Refresh frequency and agent registrations grow |
 
 ## Known architectural risks
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| LangGraph.js HITL rough edges | Blocks every stage transition | P0-5 spike gates Phase 1 |
-| HTAG rate limits on 7,000-suburb seed | Seed fails or throttles | Batch 500 with exponential backoff; weekly refresh only |
-| Criteria→query mapping sprawl | Screener logic becomes unmaintainable | Cap criteria schema at 6–8 fields for MVP |
-| Checkpointer connection exhaustion | Concurrent tasks starve the app | Dedicated connection pool for the checkpointer |
-| Agent data licensing | Scraped RateMyAgent data has ToS exposure | Apify actor, attribution, no redistribution; revisit before public launch |
+| Risk                                  | Impact                                    | Mitigation                                                                |
+| ------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
+| LangGraph.js HITL rough edges         | Blocks every stage transition             | P0-5 spike gates Phase 1                                                  |
+| HTAG rate limits on 7,000-suburb seed | Seed fails or throttles                   | Batch 500 with exponential backoff; weekly refresh only                   |
+| Criteria→query mapping sprawl         | Screener logic becomes unmaintainable     | Cap criteria schema at 6–8 fields for MVP                                 |
+| Checkpointer connection exhaustion    | Concurrent tasks starve the app           | Dedicated connection pool for the checkpointer                            |
+| Agent data licensing                  | Scraped RateMyAgent data has ToS exposure | Apify actor, attribution, no redistribution; revisit before public launch |

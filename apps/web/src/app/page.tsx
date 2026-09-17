@@ -15,7 +15,8 @@ import { ApiContractError, ApiError, ApiUnreachableError, apiFetch } from "@/lib
  * that cannot tell them apart makes you go looking in both.
  */
 const STAGE_SUMMARY: Record<string, string> = {
-  unreachable: "The API did not answer — is apps/api running, and on the port NEXT_PUBLIC_API_URL points at?",
+  unreachable:
+    "The API did not answer — is apps/api running, and on the port NEXT_PUBLIC_API_URL points at?",
   api: "The API answered and refused. Its terminal has the AuthGuard warning with the real reason.",
   contract: "The API answered 2xx with a body this client could not accept.",
   unknown: "Something else failed before the response could be read.",
@@ -88,10 +89,10 @@ export default async function HomePage() {
           </p>
         ) : (
           <div className="space-y-1 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900 dark:bg-amber-950">
-            <p className="font-medium">
-              Clerk session is fine. {STAGE_SUMMARY[result.stage]}
-            </p>
-            <pre className="whitespace-pre-wrap break-words text-neutral-700 dark:text-neutral-300">{result.detail}</pre>
+            <p className="font-medium">Clerk session is fine. {STAGE_SUMMARY[result.stage]}</p>
+            <pre className="whitespace-pre-wrap break-words text-neutral-700 dark:text-neutral-300">
+              {result.detail}
+            </pre>
           </div>
         )}
       </header>

@@ -24,10 +24,7 @@ async function bootstrap(): Promise<void> {
   const port = config.get<number>("PORT", 3001)
   await app.listen(port)
 
-  Logger.log(
-    `API listening on http://localhost:${port}/${API_PREFIX}`,
-    "Bootstrap",
-  )
+  Logger.log(`API listening on http://localhost:${port}/${API_PREFIX}`, "Bootstrap")
 }
 
 void bootstrap()

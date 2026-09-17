@@ -2,6 +2,10 @@
   "name": "@my-ba/db",
   "version": "0.0.0",
   "private": true,
+  "files": [
+    "dist",
+    "drizzle"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -14,10 +18,6 @@
       "default": "./dist/schema/index.js"
     }
   },
-  "files": [
-    "dist",
-    "drizzle"
-  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",

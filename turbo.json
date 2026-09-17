@@ -8,19 +8,11 @@
     "DATABASE_POOL_MAX",
     "REDIS_URL"
   ],
-  "globalPassThroughEnv": [
-    "CI"
-  ],
+  "globalPassThroughEnv": ["CI"],
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "dist/**",
-        ".next/**",
-        "!.next/cache/**"
-      ],
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
       "env": [
         "NEXT_PUBLIC_API_URL",
         "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
@@ -28,25 +20,17 @@
       ]
     },
     "dev": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },
     "typecheck": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "outputs": []
     },
     "test": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "coverage/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
     },
     "clean": {
       "cache": false

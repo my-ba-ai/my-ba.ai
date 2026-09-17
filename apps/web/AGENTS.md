@@ -23,23 +23,23 @@ exists after `pnpm install`.
 This project is App Router. **Ignore `02-pages/` entirely**; those patterns do not
 apply and following them will produce code that does not belong in this codebase.
 
-| Need | Path under `node_modules/next/dist/docs/01-app/` |
-|---|---|
-| Orientation, core concepts | `01-getting-started/index.md` |
-| Layouts, pages, routing | `01-getting-started/03-layouts-and-pages.md` |
-| Server vs Client Components | `01-getting-started/05-server-and-client-components.md` |
-| Data fetching | `01-getting-started/06-fetching-data.md` |
-| Mutations, Server Actions | `01-getting-started/07-mutating-data.md` |
-| Caching and revalidation | `01-getting-started/08-caching.md`, `09-revalidating.md` |
-| Error handling | `01-getting-started/10-error-handling.md` |
-| Metadata and OG images | `01-getting-started/14-metadata-and-og-images.md` |
-| Route handlers | `01-getting-started/15-route-handlers.md` |
-| File conventions (`page`, `layout`, `route`, `middleware`, `loading`, `error`) | `03-api-reference/03-file-conventions/` |
-| Functions (`cookies`, `headers`, `redirect`, `revalidateTag`, `generate-metadata`, …) | `03-api-reference/04-functions/` |
-| Directives (`use client`, `use server`, `use cache`) | `03-api-reference/01-directives/` |
-| `next.config.ts` options | `03-api-reference/05-config/01-next-config-js/` |
-| Turbopack | `03-api-reference/08-turbopack.md` |
-| Guides — 65 of them, incl. testing, forms, auth, self-hosting | `02-guides/` |
+| Need                                                                                  | Path under `node_modules/next/dist/docs/01-app/`         |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Orientation, core concepts                                                            | `01-getting-started/index.md`                            |
+| Layouts, pages, routing                                                               | `01-getting-started/03-layouts-and-pages.md`             |
+| Server vs Client Components                                                           | `01-getting-started/05-server-and-client-components.md`  |
+| Data fetching                                                                         | `01-getting-started/06-fetching-data.md`                 |
+| Mutations, Server Actions                                                             | `01-getting-started/07-mutating-data.md`                 |
+| Caching and revalidation                                                              | `01-getting-started/08-caching.md`, `09-revalidating.md` |
+| Error handling                                                                        | `01-getting-started/10-error-handling.md`                |
+| Metadata and OG images                                                                | `01-getting-started/14-metadata-and-og-images.md`        |
+| Route handlers                                                                        | `01-getting-started/15-route-handlers.md`                |
+| File conventions (`page`, `layout`, `route`, `middleware`, `loading`, `error`)        | `03-api-reference/03-file-conventions/`                  |
+| Functions (`cookies`, `headers`, `redirect`, `revalidateTag`, `generate-metadata`, …) | `03-api-reference/04-functions/`                         |
+| Directives (`use client`, `use server`, `use cache`)                                  | `03-api-reference/01-directives/`                        |
+| `next.config.ts` options                                                              | `03-api-reference/05-config/01-next-config-js/`          |
+| Turbopack                                                                             | `03-api-reference/08-turbopack.md`                       |
+| Guides — 65 of them, incl. testing, forms, auth, self-hosting                         | `02-guides/`                                             |
 
 Two Next 16 areas worth checking the docs on specifically rather than assuming:
 **cache components** (`02-guides/migrating-to-cache-components.md`, and the

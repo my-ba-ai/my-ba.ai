@@ -37,33 +37,36 @@ import { tenants } from "./tenants"
  * tenant-private data. If it ever needs to, that is a migration and a
  * conversation, not an accident.
  */
-export const suburbMetricsTs = pgTable("suburb_metrics_ts", {
-  suburbId: uuid()
-    .notNull()
-    .references(() => suburbs.id, { onDelete: "cascade" }),
-  tenantId: uuid()
-    .notNull()
-    .default(SYSTEM_TENANT_ID)
-    .references(() => tenants.id, { onDelete: "restrict" }),
-  metricName: text().notNull(),
-  observedAt: timestamp({ withTimezone: true }).notNull(),
-  value: doublePrecision().notNull(),
-  /** Which upstream produced this reading — 'HTAG', 'DOMAIN', 'ABS'. */
-  source: text().notNull().default("HTAG"),
-}, (table) => [
-  primaryKey({
-    name: "suburb_metrics_ts_pkey",
-    columns: [table.suburbId, table.metricName, table.observedAt],
-  }),
-  index("suburb_metrics_ts_observed_at_idx").on(table.observedAt),
-  index("suburb_metrics_ts_metric_name_observed_at_idx")
-    .on(table.metricName, table.observedAt),
-  index("suburb_metrics_ts_tenant_id_idx").on(table.tenantId),
-  check(
-    "suburb_metrics_ts_system_tenant_only",
-    sql`${table.tenantId} = '00000000-0000-0000-0000-000000000000'::uuid`,
-  ),
-])
+export const suburbMetricsTs = pgTable(
+  "suburb_metrics_ts",
+  {
+    suburbId: uuid()
+      .notNull()
+      .references(() => suburbs.id, { onDelete: "cascade" }),
+    tenantId: uuid()
+      .notNull()
+      .default(SYSTEM_TENANT_ID)
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    metricName: text().notNull(),
+    observedAt: timestamp({ withTimezone: true }).notNull(),
+    value: doublePrecision().notNull(),
+    /** Which upstream produced this reading — 'HTAG', 'DOMAIN', 'ABS'. */
+    source: text().notNull().default("HTAG"),
+  },
+  (table) => [
+    primaryKey({
+      name: "suburb_metrics_ts_pkey",
+      columns: [table.suburbId, table.metricName, table.observedAt],
+    }),
+    index("suburb_metrics_ts_observed_at_idx").on(table.observedAt),
+    index("suburb_metrics_ts_metric_name_observed_at_idx").on(table.metricName, table.observedAt),
+    index("suburb_metrics_ts_tenant_id_idx").on(table.tenantId),
+    check(
+      "suburb_metrics_ts_system_tenant_only",
+      sql`${table.tenantId} = '00000000-0000-0000-0000-000000000000'::uuid`,
+    ),
+  ],
+)
 
 export type SuburbMetric = typeof suburbMetricsTs.$inferSelect
 export type NewSuburbMetric = typeof suburbMetricsTs.$inferInsert

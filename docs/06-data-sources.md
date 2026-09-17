@@ -7,6 +7,7 @@ Data access is the single biggest constraint on this product. The Australian pro
 ## Sources
 
 ### HTAG Analytics — primary
+
 - Portal: `developer.htagai.com`
 - Coverage: ~7,000+ Australian suburbs, 150+ metrics
 - Interfaces: REST API **and** a native MCP server
@@ -16,23 +17,27 @@ Data access is the single biggest constraint on this product. The Australian pro
 - Geo indexing: H3 — must map to the canonical suburb entity
 
 ### Domain API — property level
+
 - Self-serve developer portal with sandbox → production flow (the only major AU provider with self-serve keys)
 - Property Package API: address suggestions, sales history, price estimates
 - Role: listings for the Property Scout, sales history for the Growth Analyser
 
 ### RateMyAgent via Apify — agent data
+
 - Apify actor returns ~38,000 AU agents: name, agency, suburb, star rating, review count, sold count, median sale price, specialties, phone/email on ~99% of rows
 - Pricing around $3 per 1,000 agents
 - Role: seeds `ScrapedAgents` + `Agencies`; the fuzzy-match target for agent profile claims
 - **Exposure:** scraped data. No redistribution, attribution where displayed, and this needs a proper legal review before the platform is public
 
 ### ABS Census — demographics
+
 - Ingested as a **static snapshot**, not a live API dependency (D28)
 - SA2-level Census DataPacks, CSV
 - One-time ETL + annual refresh
 - Role: Growth Potential Analyser — family friendliness, age distribution, household composition
 
 ### State license registers — deferred
+
 - 8 states/territories, each with a different portal (NSW `verify.licence.nsw.gov.au`, VIC Consumer Affairs, QLD Office of Fair Trading, etc.)
 - Almost all are web forms, not APIs. Automating means browser automation — fragile and ToS-exposed
 - Commercial aggregators exist (FrankieOne and similar) but are priced for financial services
@@ -40,11 +45,11 @@ Data access is the single biggest constraint on this product. The Australian pro
 
 ## Explicitly rejected
 
-| Source | Why rejected |
-|---|---|
-| DSR Data / Suburb Analyser | No public API. Web interface behind login, Lite/Pro memberships only, no developer tier. Replaced by HTAG |
-| realestate.com.au scraping | Legally risky — REA Group has litigated over listing scraping |
-| Pricefinder / PropTrack / Cotality | Sales-gated, per-deal quotes. Not viable for a pre-revenue MVP |
+| Source                             | Why rejected                                                                                              |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| DSR Data / Suburb Analyser         | No public API. Web interface behind login, Lite/Pro memberships only, no developer tier. Replaced by HTAG |
+| realestate.com.au scraping         | Legally risky — REA Group has litigated over listing scraping                                             |
+| Pricefinder / PropTrack / Cotality | Sales-gated, per-deal quotes. Not viable for a pre-revenue MVP                                            |
 
 ## Normalisation
 
@@ -53,6 +58,7 @@ Every source uses different suburb identifiers. One canonical `Suburbs` table ho
 ## Cost control
 
 The dominant cost risk is metered API calls. Mitigations:
+
 - Weekly full refresh of suburb metrics into TimescaleDB; screening reads the local cache
 - Live HTAG calls only for the ~10–20 shortlisted suburbs in Trend/Growth analysis
 - Redis caching on all external client responses

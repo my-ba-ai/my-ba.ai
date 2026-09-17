@@ -32,6 +32,7 @@ Deliverable from the design system pass: colour tokens, 6-step type scale, 4px s
 ### P1 — Screening
 
 **Create Purchase Task.** Three steps with a progress indicator.
+
 1. Basics — task name, target states (multi-select), property type, budget dual-handle range slider
 2. Criteria — grid of toggleable inputs (vacancy rate max, stock on market max, renter proportion min, demand-to-supply min, median yield min, days on market max), each with label, control and helper text
 3. Review — criteria summary card, estimated runtime, "Create Task & Run Screening" / "Save as Draft"
@@ -52,4 +53,4 @@ Validation: at least one state, at least three criteria enabled. Steps 1 and 3 m
 
 ## Design risk worth extra iteration
 
-The approval gate carries the whole product. If I don't trust or understand what the system is asking me to approve, the workflow collapses back to manual and the product has no reason to exist. Budget disproportionate design time there — specifically on making the *score breakdown* legible, since that's the thing that earns or loses trust.
+The approval gate carries the whole product. If I don't trust or understand what the system is asking me to approve, the workflow collapses back to manual and the product has no reason to exist. Budget disproportionate design time there — specifically on making the _score breakdown_ legible, since that's the thing that earns or loses trust.

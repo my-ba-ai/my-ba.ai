@@ -2,7 +2,13 @@ import type { SQL } from "drizzle-orm"
 import { PgDialect } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
 import type { Database, TenantTransaction } from "./index"
-import { AUTH_LOOKUP_SETTING, SYSTEM_TENANT_ID, withAuthLookup, withSystemTenant, withTenant } from "./index"
+import {
+  AUTH_LOOKUP_SETTING,
+  SYSTEM_TENANT_ID,
+  withAuthLookup,
+  withSystemTenant,
+  withTenant,
+} from "./index"
 
 const dialect = new PgDialect()
 

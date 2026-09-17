@@ -6,9 +6,7 @@ import { PipelineOutline } from "./pipeline-outline"
 describe("PipelineOutline", () => {
   it("renders every pipeline stage from the shared package", () => {
     render(<PipelineOutline stages={TASK_STATUS_ORDER} />)
-    expect(screen.getAllByRole("listitem")).toHaveLength(
-      TASK_STATUS_ORDER.length,
-    )
+    expect(screen.getAllByRole("listitem")).toHaveLength(TASK_STATUS_ORDER.length)
     expect(screen.getByText("contact agent")).toBeDefined()
   })
 })

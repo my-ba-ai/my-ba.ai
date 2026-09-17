@@ -8,23 +8,27 @@ import { tenants } from "./tenants"
  * exists so everything else can hold a foreign key that survives the provider
  * being swapped. `externalAuthId` is the Clerk user id.
  */
-export const users = pgTable("users", {
-  id: uuid().primaryKey().defaultRandom(),
-  tenantId: uuid()
-    .notNull()
-    .references(() => tenants.id, { onDelete: "cascade" }),
-  externalAuthId: text().notNull(),
-  email: text().notNull(),
-  role: userRole().notNull().default("investor"),
-  displayName: text(),
-  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-}, (table) => [
-  // Global, not tenant-scoped: one Clerk identity maps to exactly one row.
-  uniqueIndex("users_external_auth_id_key").on(table.externalAuthId),
-  uniqueIndex("users_tenant_id_email_key").on(table.tenantId, table.email),
-  index("users_tenant_id_idx").on(table.tenantId),
-])
+export const users = pgTable(
+  "users",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    tenantId: uuid()
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    externalAuthId: text().notNull(),
+    email: text().notNull(),
+    role: userRole().notNull().default("investor"),
+    displayName: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // Global, not tenant-scoped: one Clerk identity maps to exactly one row.
+    uniqueIndex("users_external_auth_id_key").on(table.externalAuthId),
+    uniqueIndex("users_tenant_id_email_key").on(table.tenantId, table.email),
+    index("users_tenant_id_idx").on(table.tenantId),
+  ],
+)
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert

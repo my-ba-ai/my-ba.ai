@@ -1,11 +1,11 @@
 import { createBullBoard } from "@bull-board/api"
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter"
 import { ExpressAdapter } from "@bull-board/express"
+import { API_PREFIX, QUEUE_NAMES } from "@my-ba/shared"
 import { getQueueToken } from "@nestjs/bullmq"
 import { type INestApplication, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import type { Queue } from "bullmq"
-import { API_PREFIX, QUEUE_NAMES } from "@my-ba/shared"
 import { basicAuth, type BasicAuthCredentials } from "./basic-auth"
 
 export const BULL_BOARD_PATH = `/${API_PREFIX}/admin/queues`

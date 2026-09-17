@@ -19,7 +19,7 @@ export const QUEUE_NAMES = {
   AGENT_SCRAPE: "agent-scrape",
 } as const
 
-export type QueueName = typeof QUEUE_NAMES[keyof typeof QUEUE_NAMES]
+export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]
 
 /**
  * Prefix for every BullMQ key in Redis (`<prefix>:<queue>:...`). Both apps must
