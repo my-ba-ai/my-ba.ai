@@ -1,9 +1,9 @@
+import type { Database } from "@my-ba/db"
+import { AUTH_LOOKUP_SETTING, TENANT_SETTING } from "@my-ba/db"
 import type { ConfigService } from "@nestjs/config"
 import type { SQL } from "drizzle-orm"
 import { PgDialect } from "drizzle-orm/pg-core"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { Database } from "@my-ba/db"
-import { AUTH_LOOKUP_SETTING, TENANT_SETTING } from "@my-ba/db"
 import { IdentityResolverService, type Identity } from "./identity-resolver.service"
 import type { UserDirectory } from "./user-directory"
 
@@ -51,13 +51,18 @@ function harness(): Harness {
       }),
     }),
     insert: () => ({
-      values: () => ({
+      values: () => {
+        const result = Promise.resolve(undefined) as Promise<undefined> & {
+          returning: () => Promise<Identity[]>
+        }
+
         // `await tx.insert(tenants).values(...)` — the tenants row.
-        then: (resolve: (value: undefined) => unknown) => resolve(undefined),
         // `...values(...).returning(...)` — the users row, and the one that
         // can collide on users_external_auth_id_key.
-        returning: async () => [state.onInsertUser()],
-      }),
+        result.returning = async () => [state.onInsertUser()]
+
+        return result
+      },
     }),
   }
 
