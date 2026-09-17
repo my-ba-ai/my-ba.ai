@@ -49,6 +49,44 @@
 
 ---
 
+### P0-8 — Mechanical secret scanning (CI + pre-commit)
+
+**Description:** `AGENTS.md` bans secrets and key-shaped literals in tracked files, but a written rule only works if whoever is writing reads it, and an agent has already broken it once (a format-valid Clerk dummy key in `ci.yml`, caught before commit). Enforce the rule with [gitleaks](https://github.com/gitleaks/gitleaks) at two points: before a commit exists, and before a merge.
+
+- **Config:** `.gitleaks.toml` at the repo root that extends the default ruleset (`[extend] useDefault = true`), plus:
+  - Custom rules for the providers this project uses where the defaults might not cover them: Clerk `pk_(test|live)_…` and `sk_(test|live)_…`, and HtAG, Domain, Apify, Resend/SendGrid and Cloudflare R2 token shapes. For each provider, check the gitleaks default rules first and add a rule only where one is missing; don't guess at token formats.
+  - An allowlist that is exactly: the `*_replace_me` placeholders in `**/.env.example`, and the local docker-compose credentials (`postgres:postgres@localhost`, `my_ba_app:app@localhost`) in `.env.example`, `docker-compose.yml` and `infra/postgres/init/`. Nothing broader: no whole-file or whole-directory allowlists.
+- **CI:** a `secrets` job in `.github/workflows/ci.yml`, in parallel with `verify`.
+  - Checkout uses `fetch-depth: 0`.
+  - Run the **gitleaks CLI** (pinned version, checksum-verified download), not `gitleaks/gitleaks-action`: the action needs a `GITLEAKS_LICENSE` for repos owned by an organisation (`my-ba-ai` is one), and the CLI doesn't.
+  - Scan the commits in the PR range on PRs, and the full history on push to `main`.
+  - Use `--redact` so a finding never prints the secret into the Actions log. Upload the SARIF/JSON report as an artifact.
+- **Pre-commit:**
+  - Add [lefthook](https://github.com/evilmartians/lefthook) (a devDependency, installed through the root `prepare` script) with a `pre-commit` hook that scans **staged** changes only.
+  - The subcommand differs across gitleaks v8 minors (`protect --staged` vs `git --staged`), so use whatever the pinned version's `--help` shows.
+  - If `gitleaks` isn't installed, the hook prints `brew install gitleaks` and fails. It does not skip silently.
+- **Docs:** `AGENTS.md` → "Secrets and credentials" says the hook and CI job exist, that `git commit --no-verify` is not an agent option, and how to add a *reviewed* allowlist entry (as a PR that names the reason). README "Getting started" gets the `brew install gitleaks` step.
+- **One-off:** scan the full history once when this lands and record the result (clean, or findings → rotate first, then decide whether to rewrite history) in the PR description.
+
+**Acceptance criteria:**
+
+1. `gitleaks` over the full history of `main` exits 0 with the committed config. Any real finding is rotated at the provider *before* it's allowlisted or the history is rewritten.
+2. On a throwaway branch, committing a file containing `pk_test_` + base64(`example.clerk.accounts.dev$`) is **blocked by the pre-commit hook**. Pushing it with `--no-verify` then **fails the `secrets` CI job**. Both are shown in the PR description, and the branch is deleted afterwards.
+3. The same test with an AWS-shaped key (`AKIA…`) and a PEM private-key header is also caught (this proves the default rules are active).
+4. `pk_test_replace_me` in an `.env.example` and `postgres:postgres@localhost` in `docker-compose.yml` are **not** flagged.
+5. CI logs show findings redacted. No matched value appears in plain text.
+6. `secrets` is a required status check on `main`, next to `verify` (and `integration` once P0-7 lands).
+7. The hook adds < 1 s to a typical commit (it scans staged changes, not the repo).
+8. A fresh clone plus `pnpm install` installs the hook with no extra step, apart from installing the gitleaks binary.
+
+**Dependencies:** none (can land before P0-7; if both touch `ci.yml`, whichever lands second rebases). **Risk:** low.
+
+**Watch items:**
+
+- False positives on generated files (`pnpm-lock.yaml` integrity hashes, `drizzle/meta/*_snapshot.json` ids). If they appear, fix them with narrow path+rule allowlists, never by disabling the rule.
+- The hook is local and can be bypassed. CI is the real gate, and the hook just catches mistakes earlier.
+- **Optional:** GitHub's native secret scanning with push protection blocks the push itself. It's free for public repos; for a private org repo, check the current GitHub plan and pricing before relying on it. It complements gitleaks rather than replacing it (it only knows partner token formats).
+
 ## Phase 1 — HtAG Integration + Suburb Screener (Weeks 2–3)
 
 **Goal:** create a task with an investor profile and criteria → HtAG server-side screen → our strategy-weighted ranking → HITL approval gate. Per-task HtAG spend ≤ AUD $20 (D16).
