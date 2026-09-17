@@ -86,13 +86,13 @@ workflows, Dockerfiles, docs, READMEs, commit messages and PR descriptions.
 
 **Where values go instead:**
 
-| Context           | Mechanism                                                                                       |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| Local dev         | `.env` / `.env.local` (gitignored). Never read them aloud into code, docs or chat.              |
-| CI                | `${{ vars.NAME }}` (public config) or `${{ secrets.NAME }}` (anything sensitive). Never inline. |
-| Deployed envs     | The host's secret store (Railway/Render), later GitHub Environments per stage.                  |
-| Tests             | Read from env; skip or fail with a clear message when absent. Mock the provider, not the key.   |
-| `.env.example`    | Variable **names** with obvious non-functional placeholders only: `pk_test_replace_me`.         |
+| Context        | Mechanism                                                                                       |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| Local dev      | `.env` / `.env.local` (gitignored). Never read them aloud into code, docs or chat.              |
+| CI             | `${{ vars.NAME }}` (public config) or `${{ secrets.NAME }}` (anything sensitive). Never inline. |
+| Deployed envs  | The host's secret store (Railway/Render), later GitHub Environments per stage.                  |
+| Tests          | Read from env; skip or fail with a clear message when absent. Mock the provider, not the key.   |
+| `.env.example` | Variable **names** with obvious non-functional placeholders only: `pk_test_replace_me`.         |
 
 **The only literals allowed** are the local docker-compose credentials that
 already exist (`postgres:postgres`, `my_ba_app:app` on `localhost`). They
@@ -103,8 +103,8 @@ unlock nothing outside a developer's own machine. Don't add new ones.
 1. Don't hardcode it to get past the failure, even temporarily or "for CI only".
 2. Wire the code or workflow to read it from env/`vars`/`secrets`, and add a
    fail-fast check that names the missing variable and where to set it.
-3. Tell the user exactly which variable to create and where (e.g. *Settings →
-   Secrets and variables → Actions*). Creating it is their step, not yours.
+3. Tell the user exactly which variable to create and where (e.g. _Settings →
+   Secrets and variables → Actions_). Creating it is their step, not yours.
 
 **If you notice a secret already committed** — in the working tree or git
 history — stop and tell the user. Don't try to "fix" it by editing the file
