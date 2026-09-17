@@ -12,28 +12,36 @@ import { tenants } from "./tenants"
  *
  * Reference data, so it belongs to the system tenant — see SYSTEM_TENANT_ID.
  */
-export const suburbs = pgTable("suburbs", {
-  id: uuid().primaryKey().defaultRandom(),
-  tenantId: uuid()
-    .notNull()
-    .default(SYSTEM_TENANT_ID)
-    .references(() => tenants.id, { onDelete: "restrict" }),
-  name: text().notNull(),
-  state: auState().notNull(),
-  postcode: text().notNull(),
-  h3Index: text(),
-  htagId: text(),
-  domainId: text(),
-  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-}, (table) => [
-  uniqueIndex("suburbs_tenant_state_postcode_name_key")
-    .on(table.tenantId, table.state, table.postcode, table.name),
-  uniqueIndex("suburbs_tenant_htag_id_key").on(table.tenantId, table.htagId),
-  index("suburbs_domain_id_idx").on(table.domainId),
-  index("suburbs_h3_index_idx").on(table.h3Index),
-  index("suburbs_tenant_id_idx").on(table.tenantId),
-])
+export const suburbs = pgTable(
+  "suburbs",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    tenantId: uuid()
+      .notNull()
+      .default(SYSTEM_TENANT_ID)
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    name: text().notNull(),
+    state: auState().notNull(),
+    postcode: text().notNull(),
+    h3Index: text(),
+    htagId: text(),
+    domainId: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("suburbs_tenant_state_postcode_name_key").on(
+      table.tenantId,
+      table.state,
+      table.postcode,
+      table.name,
+    ),
+    uniqueIndex("suburbs_tenant_htag_id_key").on(table.tenantId, table.htagId),
+    index("suburbs_domain_id_idx").on(table.domainId),
+    index("suburbs_h3_index_idx").on(table.h3Index),
+    index("suburbs_tenant_id_idx").on(table.tenantId),
+  ],
+)
 
 export type Suburb = typeof suburbs.$inferSelect
 export type NewSuburb = typeof suburbs.$inferInsert

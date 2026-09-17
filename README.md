@@ -10,7 +10,7 @@ investment property purchases. Product and architecture docs live in [`docs/`](.
 apps/
   api/        NestJS 11 — REST + BFF. Owns HTTP, auth, tenant routing.
   web/        Next.js 16 App Router + Tailwind v4.
-  worker/     NestJS standalone context — BullMQ processors (P0-4). Scales separately.
+  worker/     NestJS standalone context — BullMQ processors. Scales separately.
 packages/
   shared/     Zod schemas, domain types, queue names. The contract between all three apps.
   db/         Drizzle schema, migrations, pool factory, tenant-scoped transactions.
@@ -56,19 +56,19 @@ tenant policy in the schema is doing nothing (D40).
 
 ## Scripts
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | All three apps in watch mode |
-| `pnpm build` | Turbo build, respecting the dependency graph |
-| `pnpm typecheck` | `tsc --noEmit` across every workspace |
-| `pnpm lint` | Oxlint |
-| `pnpm format` | oxfmt (write); `pnpm format:check` in CI |
-| `pnpm test` | Vitest across every workspace |
-| `pnpm check` | typecheck + lint + format:check + test — what CI runs |
-| `pnpm db:up` / `db:down` | Local Postgres via docker compose |
-| `pnpm db:generate` | Schema change → migration. Never hand-write `CREATE TABLE` |
-| `pnpm db:migrate` | Apply migrations. Explicit step, never on startup (D39) |
-| `pnpm db:studio` | Drizzle Studio against the local database |
+| Command                  | What it does                                               |
+| ------------------------ | ---------------------------------------------------------- |
+| `pnpm dev`               | All three apps in watch mode                               |
+| `pnpm build`             | Turbo build, respecting the dependency graph               |
+| `pnpm typecheck`         | `tsc --noEmit` across every workspace                      |
+| `pnpm lint`              | Oxlint                                                     |
+| `pnpm format`            | oxfmt (write); `pnpm format:check` in CI                   |
+| `pnpm test`              | Vitest across every workspace                              |
+| `pnpm check`             | typecheck + lint + format:check + test — what CI runs      |
+| `pnpm db:up` / `db:down` | Local Postgres via docker compose                          |
+| `pnpm db:generate`       | Schema change → migration. Never hand-write `CREATE TABLE` |
+| `pnpm db:migrate`        | Apply migrations. Explicit step, never on startup (D39)    |
+| `pnpm db:studio`         | Drizzle Studio against the local database                  |
 
 ## Conventions
 

@@ -8,3 +8,6 @@ export const TOKEN_VERIFIER = Symbol("TOKEN_VERIFIER")
 
 /** Reads an identity's profile from the auth provider. Called once per user, ever. */
 export const USER_DIRECTORY = Symbol("USER_DIRECTORY")
+
+/** Clerk id -> local identity cache. Redis in the app, in-memory in tests. */
+export const IDENTITY_CACHE = Symbol("IDENTITY_CACHE")

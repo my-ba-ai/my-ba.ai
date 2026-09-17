@@ -18,11 +18,11 @@ Selecting an investment property in Australia is a repetitive research pipeline:
 
 ## Users
 
-| Who | Needs | MVP status |
-|---|---|---|
-| **Investor** (primary) | Turn criteria into a defensible shortlist without doing the research by hand | Full workflow |
-| **Sales agent** (secondary) | Claim their profile, receive qualified investor enquiries | Registration + verification only |
-| **Admin/ops** (me) | Verification queue, scraper health, run diagnostics | Minimal internal tooling |
+| Who                         | Needs                                                                        | MVP status                       |
+| --------------------------- | ---------------------------------------------------------------------------- | -------------------------------- |
+| **Investor** (primary)      | Turn criteria into a defensible shortlist without doing the research by hand | Full workflow                    |
+| **Sales agent** (secondary) | Claim their profile, receive qualified investor enquiries                    | Registration + verification only |
+| **Admin/ops** (me)          | Verification queue, scraper health, run diagnostics                          | Minimal internal tooling         |
 
 ## Business model
 
@@ -36,14 +36,14 @@ I create a Purchase Task with criteria, the system screens 7,000+ suburbs, I app
 
 ## Glossary
 
-| Term | Meaning |
-|---|---|
-| **Purchase Task** | The aggregate root. One investment search, from criteria definition through agent contact. Has a lifecycle state machine and owns every artifact produced along the way. |
-| **Stage** | A step in the Purchase Task state machine (SCREENING, TREND_ANALYSIS, etc.), each executed by one agent. |
-| **HITL gate** | A pause at a stage boundary waiting for human approval. Implemented as a LangGraph `interrupt()`. |
-| **Autonomy config** | Per-user, per-agent-type setting controlling whether a stage pauses for approval or runs through. Overridable per-run. |
-| **Lock** | When a task enters CONTACT_AGENT, its artifacts are frozen as an immutable snapshot. No re-analysis in place. |
-| **Clone** | Copying a task's criteria into a fresh task to re-run the pipeline with current data. The original stays locked. |
-| **HTAG** | HtAG Analytics (developer.htagai.com) — the primary Australian suburb metrics provider. REST API + native MCP server. |
-| **Screening result** | A ranked suburb row produced by the Suburb Screener for a given task. |
-| **Run log** | The `AnalysisSteps` record of every agent execution: inputs, outputs, tool calls, reasoning, cost. |
+| Term                 | Meaning                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Purchase Task**    | The aggregate root. One investment search, from criteria definition through agent contact. Has a lifecycle state machine and owns every artifact produced along the way. |
+| **Stage**            | A step in the Purchase Task state machine (SCREENING, TREND_ANALYSIS, etc.), each executed by one agent.                                                                 |
+| **HITL gate**        | A pause at a stage boundary waiting for human approval. Implemented as a LangGraph `interrupt()`.                                                                        |
+| **Autonomy config**  | Per-user, per-agent-type setting controlling whether a stage pauses for approval or runs through. Overridable per-run.                                                   |
+| **Lock**             | When a task enters CONTACT_AGENT, its artifacts are frozen as an immutable snapshot. No re-analysis in place.                                                            |
+| **Clone**            | Copying a task's criteria into a fresh task to re-run the pipeline with current data. The original stays locked.                                                         |
+| **HTAG**             | HtAG Analytics (developer.htagai.com) — the primary Australian suburb metrics provider. REST API + native MCP server.                                                    |
+| **Screening result** | A ranked suburb row produced by the Suburb Screener for a given task.                                                                                                    |
+| **Run log**          | The `AnalysisSteps` record of every agent execution: inputs, outputs, tool calls, reasoning, cost.                                                                       |

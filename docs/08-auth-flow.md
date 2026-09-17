@@ -104,10 +104,10 @@ Both are transaction-local (`set_config(..., true)`), never session-level — a
 pooled connection outlives the request, so a session GUC would leak one tenant's
 scope into the next query on that socket.
 
-| Setting | Set by | Policy it drives | Visible rows | Allows writes |
-|---|---|---|---|---|
-| `app.tenant_id` | `withTenant()` | `users_isolation`, `tenants_isolation`, `purchase_tasks_isolation`, `suburbs_*` | everything owned by that tenant | yes |
-| `app.bootstrap_auth_id` | `withAuthLookup()` | `users_auth_bootstrap` | exactly one `users` row, matched by `external_auth_id` | **no** — the policy is `FOR SELECT` |
+| Setting                 | Set by             | Policy it drives                                                                | Visible rows                                           | Allows writes                       |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------- |
+| `app.tenant_id`         | `withTenant()`     | `users_isolation`, `tenants_isolation`, `purchase_tasks_isolation`, `suburbs_*` | everything owned by that tenant                        | yes                                 |
+| `app.bootstrap_auth_id` | `withAuthLookup()` | `users_auth_bootstrap`                                                          | exactly one `users` row, matched by `external_auth_id` | **no** — the policy is `FOR SELECT` |
 
 `withAuthLookup` exists for one query in the whole system: turning a verified
 Clerk id into a tenant, before a tenant exists to scope by. Everything after
@@ -123,17 +123,17 @@ query that loses its scope returns nothing rather than everything.
 
 ## Where each piece lives
 
-| Concern | File |
-|---|---|
-| Session available to server components | `apps/web/src/proxy.ts` |
-| Token attached to API calls | `apps/web/src/lib/api-client.ts` |
-| Route protection (global, opt-out) | `apps/api/src/auth/auth.guard.ts` + `public.decorator.ts` |
-| Token verification, swappable | `apps/api/src/auth/token-verifier.ts` |
-| Profile read at provisioning, swappable | `apps/api/src/auth/user-directory.ts` |
-| Resolution, JIT provisioning, cache | `apps/api/src/auth/identity-resolver.service.ts` |
-| The only sanctioned way to query | `apps/api/src/database/tenant-database.service.ts` |
-| GUC wrappers | `packages/db/src/tenant.ts` |
-| Policies | `packages/db/sql/rls.sql`, `packages/db/sql/auth-bootstrap.sql` |
+| Concern                                 | File                                                            |
+| --------------------------------------- | --------------------------------------------------------------- |
+| Session available to server components  | `apps/web/src/proxy.ts`                                         |
+| Token attached to API calls             | `apps/web/src/lib/api-client.ts`                                |
+| Route protection (global, opt-out)      | `apps/api/src/auth/auth.guard.ts` + `public.decorator.ts`       |
+| Token verification, swappable           | `apps/api/src/auth/token-verifier.ts`                           |
+| Profile read at provisioning, swappable | `apps/api/src/auth/user-directory.ts`                           |
+| Resolution, JIT provisioning, cache     | `apps/api/src/auth/identity-resolver.service.ts`                |
+| The only sanctioned way to query        | `apps/api/src/database/tenant-database.service.ts`              |
+| GUC wrappers                            | `packages/db/src/tenant.ts`                                     |
+| Policies                                | `packages/db/sql/rls.sql`, `packages/db/sql/auth-bootstrap.sql` |
 
 `TokenVerifier` and `UserDirectory` are interfaces behind DI tokens so the guard
 never imports `@clerk/backend` directly. That is what makes D41's claim — the
@@ -151,9 +151,18 @@ just in the schema.
 - **401s are deliberately vague.** The guard logs why verification failed and
   returns `Invalid or expired session token`. Telling a caller whether a token
   was malformed, expired or minted for another party is free reconnaissance.
-- **A role change takes up to the cache TTL to apply.** Accepted at one user.
-  When P0-4 lands Redis the cache moves there and invalidation becomes
-  cross-process.
+- **A role change takes up to the cache TTL to apply** unless
+  `IdentityResolverService.invalidate()` is called. Since P0-4 the cache is in
+  Redis (`my-ba:auth:identity:<clerk id>`, `PX` = `AUTH_IDENTITY_CACHE_TTL_MS`)
+  and shared by every API process, so one call invalidates everywhere (D50).
+- **Redis down means slower, not broken.** A cache read or write failure is
+  logged and treated as a miss; the lookup goes to Postgres. Only
+  `invalidate()` surfaces a Redis error, because a silently failed invalidation
+  leaves a stale role in place.
+- **Redis is inside the trust boundary.** Whoever can write the cache key
+  decides which tenant a Clerk id resolves to. Entries are Zod-parsed on read,
+  which stops garbage, not a well-formed forgery — so Redis must require auth
+  and be private outside local dev.
 - **No `AUTH_DISABLED` flag exists.** The API refuses to boot without
   `CLERK_JWT_KEY` or `CLERK_SECRET_KEY`, because a switch that turns the guard
   off is a switch that can be set in the wrong environment.

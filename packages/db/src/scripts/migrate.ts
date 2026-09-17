@@ -140,7 +140,8 @@ async function main(): Promise<void> {
     const reason = error instanceof Error ? error.message : String(error)
     throw new Error(
       `Could not connect to ${host} within ${CONNECT_TIMEOUT_MS / 1000}s: ${reason}\n` +
-        "Is the database up? Try: docker compose ps  (and 'pnpm db:up' if not).", { cause: error },
+        "Is the database up? Try: docker compose ps  (and 'pnpm db:up' if not).",
+      { cause: error },
     )
   }
 
@@ -157,7 +158,8 @@ async function main(): Promise<void> {
     const applied = after.size - before.size
     log(applied === 0 ? "already up to date" : `applied ${applied} migration(s)`)
   } finally {
-    await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_ADVISORY_LOCK_KEY])
+    await client
+      .query("SELECT pg_advisory_unlock($1)", [MIGRATION_ADVISORY_LOCK_KEY])
       .catch(() => undefined)
     client.release()
     await pool.end()

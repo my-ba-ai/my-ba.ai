@@ -3,8 +3,8 @@
   "printWidth": 100,
   "tabWidth": 2,
   "useTabs": false,
-  "semi": true,
-  "singleQuote": true,
+  "semi": false,
+  "singleQuote": false,
   "jsxSingleQuote": false,
   "ignorePatterns": [
     "**/dist/**",
@@ -12,6 +12,7 @@
     "**/.turbo/**",
     "**/node_modules/**",
     "docs/prototypes/**",
+    "packages/db/drizzle/**",
     "pnpm-lock.yaml"
   ]
 }

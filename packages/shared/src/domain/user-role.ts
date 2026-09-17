@@ -8,7 +8,7 @@
  */
 export const USER_ROLES = ["investor", "agent", "admin"] as const
 
-export type UserRole = typeof USER_ROLES[number]
+export type UserRole = (typeof USER_ROLES)[number]
 
 /** What a just-provisioned identity gets (D45). Agent and admin are granted, never claimed. */
 export const DEFAULT_USER_ROLE: UserRole = "investor"

@@ -1,8 +1,6 @@
 import type { TaskStatus } from "@my-ba/shared"
 
-export function PipelineOutline({
-  stages,
-}: Readonly<{ stages: readonly TaskStatus[] }>) {
+export function PipelineOutline({ stages }: Readonly<{ stages: readonly TaskStatus[] }>) {
   return (
     <section aria-labelledby="pipeline-heading" className="space-y-3">
       <h2

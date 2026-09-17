@@ -1,9 +1,19 @@
-import { getTableName, is } from "drizzle-orm"
+import { type Column, getTableName, is } from "drizzle-orm"
+import { toSnakeCase } from "drizzle-orm/casing"
 import { getTableConfig, PgTable } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
 import * as schema from "./index"
 
 const tables = Object.values(schema).filter((value) => is(value, PgTable)) as PgTable[]
+
+/**
+ * The column's name in Postgres. Columns declared without an explicit name
+ * (`uuid()`) carry their JS key in `column.name` and get snake-cased only when
+ * a query is built (`casing: "snake_case"` in client.ts and drizzle.config.ts),
+ * so comparing `column.name` against `"tenant_id"` would never match.
+ */
+const sqlName = (column: Column): string =>
+  column.keyAsName ? toSnakeCase(column.name) : column.name
 
 describe("schema", () => {
   it("exports every table", () => {
@@ -25,11 +35,11 @@ describe("schema", () => {
     "%s carries tenant_id",
     (name, table) => {
       const { columns } = getTableConfig(table)
-      const tenantColumn = columns.find((column) => column.name === "tenant_id")
+      const tenantColumn = columns.find((column) => sqlName(column) === "tenant_id")
 
       if (name === "tenants") {
         // The tenants table *is* the tenant; its primary key plays that role.
-        expect(columns.find((column) => column.name === "id")?.primary).toBe(true)
+        expect(columns.find((column) => sqlName(column) === "id")?.primary).toBe(true)
         return
       }
 
@@ -58,7 +68,7 @@ describe("schema", () => {
 
     // Timescale rejects any unique index that omits the partitioning column,
     // so this is a real constraint on the schema, not a style preference.
-    expect(pk?.columns.map((column) => column.name)).toContain("observed_at")
-    expect(columns.find((column) => column.name === "observed_at")?.notNull).toBe(true)
+    expect(pk?.columns.map(sqlName)).toContain("observed_at")
+    expect(columns.find((column) => sqlName(column) === "observed_at")?.notNull).toBe(true)
   })
 })

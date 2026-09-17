@@ -29,6 +29,7 @@ The whole pipeline runs on task creation with data current at that moment. There
 ## Locking
 
 On transition to `CONTACT_AGENT`:
+
 - `PurchaseTasks.locked_at` is set
 - The full artifact payload is snapshotted into `TaskArtifacts` — not just flagged
 

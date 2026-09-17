@@ -7,7 +7,13 @@ vi.mock("@clerk/backend", () => ({
   verifyToken: (...args: unknown[]) => verifyToken(...args),
 }))
 
-const VALID_PAYLOAD = { sub: "user_2abc", sid: "sess_1", azp: "http://localhost:3000", iat: 1, exp: 2 }
+const VALID_PAYLOAD = {
+  sub: "user_2abc",
+  sid: "sess_1",
+  azp: "http://localhost:3000",
+  iat: 1,
+  exp: 2,
+}
 
 describe("ClerkTokenVerifier", () => {
   beforeEach(() => {

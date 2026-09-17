@@ -5,7 +5,8 @@ import { eq } from "drizzle-orm"
 import { DEFAULT_USER_ROLE, type UserRole } from "@my-ba/shared"
 import { tenants, users, withAuthLookup, withTenant, type Database } from "@my-ba/db"
 import { DATABASE } from "../database/database.tokens"
-import { USER_DIRECTORY } from "./auth.tokens"
+import { IDENTITY_CACHE, USER_DIRECTORY } from "./auth.tokens"
+import type { IdentityCache } from "./identity-cache"
 import type { UserDirectory } from "./user-directory"
 
 export interface Identity {
@@ -19,11 +20,6 @@ export interface Identity {
 export interface ResolvedIdentity extends Identity {
   /** True when this call created the rows rather than finding them. */
   provisioned: boolean
-}
-
-interface CacheEntry {
-  identity: Identity
-  expiresAt: number
 }
 
 /** Postgres unique_violation. The one error in `provision` that is not a failure. */
@@ -43,7 +39,10 @@ function isUniqueViolation(error: unknown): boolean {
 /** `brian@example.com` -> `brian-3f2a91cc`. Unique because the suffix is. */
 function tenantSlug(email: string, tenantId: string): string {
   const local = email.split("@")[0] ?? "tenant"
-  const base = local.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+  const base = local
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
   return `${base.length > 0 ? base : "tenant"}-${tenantId.replaceAll("-", "").slice(0, 8)}`
 }
 
@@ -61,43 +60,51 @@ function tenantSlug(email: string, tenantId: string): string {
 @Injectable()
 export class IdentityResolverService {
   private readonly logger = new Logger(IdentityResolverService.name)
-  private readonly cache = new Map<string, CacheEntry>()
   private readonly ttlMs: number
 
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(USER_DIRECTORY) private readonly directory: UserDirectory,
+    @Inject(IDENTITY_CACHE) private readonly cache: IdentityCache,
     config: ConfigService,
   ) {
-    this.ttlMs = config.get<number>("AUTH_IDENTITY_CACHE_TTL_MS", 60_000)
+    // Env values arrive as strings; Redis PX needs a positive integer.
+    const ttlMs = Number(config.get<string | number>("AUTH_IDENTITY_CACHE_TTL_MS", 60_000))
+    if (!Number.isInteger(ttlMs) || ttlMs <= 0) {
+      throw new Error("AUTH_IDENTITY_CACHE_TTL_MS must be a positive integer (milliseconds).")
+    }
+    this.ttlMs = ttlMs
   }
 
   /**
-   * In-process and deliberately small. It exists so the identity lookup is not
-   * a database round trip on every authenticated request; it is not a session
-   * store and must not become one. A role change takes up to the TTL to apply,
-   * which is the accepted cost at one user. When P0-4 lands Redis this moves
-   * there and the invalidation below becomes cross-process.
+   * The cache (Redis, shared by every API process — P0-4) exists so the
+   * identity lookup is not a database round trip on every authenticated
+   * request; it is not a session store and must not become one. A role change
+   * takes up to the TTL to apply unless `invalidate` is called, and because
+   * the cache is shared, one call invalidates it for every process.
+   *
+   * If Redis is down the cache reports a miss and this falls through to
+   * Postgres: slower, never wrong.
    */
   async resolve(externalAuthId: string): Promise<ResolvedIdentity> {
-    const cached = this.cache.get(externalAuthId)
-    if (cached && cached.expiresAt > Date.now()) {
-      return { ...cached.identity, provisioned: false }
+    const cached = await this.cache.get(externalAuthId)
+    if (cached) {
+      return { ...cached, provisioned: false }
     }
 
     const found = await this.lookup(externalAuthId)
     if (found) {
-      this.remember(externalAuthId, found)
+      await this.cache.set(externalAuthId, found, this.ttlMs)
       return { ...found, provisioned: false }
     }
 
     const created = await this.provision(externalAuthId)
-    this.remember(externalAuthId, created.identity)
+    await this.cache.set(externalAuthId, created.identity, this.ttlMs)
     return { ...created.identity, provisioned: created.provisioned }
   }
 
-  invalidate(externalAuthId: string): void {
-    this.cache.delete(externalAuthId)
+  async invalidate(externalAuthId: string): Promise<void> {
+    await this.cache.delete(externalAuthId)
   }
 
   /**
@@ -178,9 +185,5 @@ export class IdentityResolverService {
       if (!existing) throw error
       return { identity: existing, provisioned: false }
     }
-  }
-
-  private remember(externalAuthId: string, identity: Identity): void {
-    this.cache.set(externalAuthId, { identity, expiresAt: Date.now() + this.ttlMs })
   }
 }

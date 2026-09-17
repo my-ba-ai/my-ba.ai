@@ -14,41 +14,45 @@ import { users } from "./users"
  * Either way the database should not be the thing that has to migrate while
  * that question is open.
  */
-export const purchaseTasks = pgTable("purchase_tasks", {
-  id: uuid().primaryKey().defaultRandom(),
-  tenantId: uuid()
-    .notNull()
-    .references(() => tenants.id, { onDelete: "cascade" }),
-  userId: uuid()
-    .notNull()
-    .references(() => users.id, { onDelete: "restrict" }),
-  name: text().notNull(),
-  status: taskStatus().notNull().default("DRAFT"),
-  criteria: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+export const purchaseTasks = pgTable(
+  "purchase_tasks",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    tenantId: uuid()
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    name: text().notNull(),
+    status: taskStatus().notNull().default("DRAFT"),
+    criteria: jsonb().$type<Record<string, unknown>>().notNull().default({}),
 
-  /** Set on transition to CONTACT_AGENT. Non-null means immutable (D04). */
-  lockedAt: timestamp({ withTimezone: true }),
+    /** Set on transition to CONTACT_AGENT. Non-null means immutable (D04). */
+    lockedAt: timestamp({ withTimezone: true }),
 
-  /**
-   * Points at the `task_artifacts` snapshot taken at lock time (D04). No
-   * foreign key yet: `task_artifacts` arrives in Phase 3, and the constraint
-   * is added in the migration that creates it.
-   */
-  lockedSnapshotId: uuid(),
+    /**
+     * Points at the `task_artifacts` snapshot taken at lock time (D04). No
+     * foreign key yet: `task_artifacts` arrives in Phase 3, and the constraint
+     * is added in the migration that creates it.
+     */
+    lockedSnapshotId: uuid(),
 
-  /** D05 — cloning is the path to re-running with fresh data. */
-  clonedFromTaskId: uuid().references((): AnyPgColumn => purchaseTasks.id, {
-    onDelete: "set null",
-  }),
+    /** D05 — cloning is the path to re-running with fresh data. */
+    clonedFromTaskId: uuid().references((): AnyPgColumn => purchaseTasks.id, {
+      onDelete: "set null",
+    }),
 
-  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-}, (table) => [
-  index("purchase_tasks_tenant_id_idx").on(table.tenantId),
-  index("purchase_tasks_user_id_idx").on(table.userId),
-  index("purchase_tasks_tenant_id_status_idx").on(table.tenantId, table.status),
-  index("purchase_tasks_cloned_from_task_id_idx").on(table.clonedFromTaskId),
-])
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("purchase_tasks_tenant_id_idx").on(table.tenantId),
+    index("purchase_tasks_user_id_idx").on(table.userId),
+    index("purchase_tasks_tenant_id_status_idx").on(table.tenantId, table.status),
+    index("purchase_tasks_cloned_from_task_id_idx").on(table.clonedFromTaskId),
+  ],
+)
 
 export type PurchaseTask = typeof purchaseTasks.$inferSelect
 export type NewPurchaseTask = typeof purchaseTasks.$inferInsert

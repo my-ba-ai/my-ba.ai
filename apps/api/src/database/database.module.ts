@@ -7,12 +7,7 @@ import {
   type Provider,
 } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
-import {
-  createDatabase,
-  createPool,
-  type Database,
-  type DatabasePool,
-} from "@my-ba/db"
+import { createDatabase, createPool, type Database, type DatabasePool } from "@my-ba/db"
 import { DATABASE, DATABASE_POOL } from "./database.tokens"
 import { TenantDatabaseService } from "./tenant-database.service"
 

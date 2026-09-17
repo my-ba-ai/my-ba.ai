@@ -29,9 +29,7 @@ export class ClerkUserDirectory implements UserDirectory {
     const client = createClerkClient({ secretKey: this.secretKey })
     const user = await client.users.getUser(externalAuthId)
 
-    const primary = user.emailAddresses.find(
-      (address) => address.id === user.primaryEmailAddressId,
-    )
+    const primary = user.emailAddresses.find((address) => address.id === user.primaryEmailAddressId)
     const email = primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress
 
     if (!email) {

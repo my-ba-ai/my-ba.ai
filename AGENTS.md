@@ -7,14 +7,14 @@ the first thing to read before proposing anything architectural.
 
 ## Repo shape
 
-| Path | What it is |
-|---|---|
-| `apps/api` | NestJS 11 — REST + BFF. HTTP, auth, tenant routing. |
-| `apps/web` | Next.js 16 App Router + Tailwind v4. Has its own `AGENTS.md`. |
-| `apps/worker` | NestJS standalone context — BullMQ processors. Scales independently of the API. |
-| `packages/db` | Drizzle schema, migrations, pool factory, tenant-scoped transaction wrapper. |
+| Path              | What it is                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| `apps/api`        | NestJS 11 — REST + BFF. HTTP, auth, tenant routing.                                  |
+| `apps/web`        | Next.js 16 App Router + Tailwind v4. Has its own `AGENTS.md`.                        |
+| `apps/worker`     | NestJS standalone context — BullMQ processors. Scales independently of the API.      |
+| `packages/db`     | Drizzle schema, migrations, pool factory, tenant-scoped transaction wrapper.         |
 | `packages/shared` | Zod schemas, domain types, queue names. The contract all three apps compile against. |
-| `packages/config` | Shared tsconfig presets: `base` / `lib` / `nest` / `next`. |
+| `packages/config` | Shared tsconfig presets: `base` / `lib` / `nest` / `next`.                           |
 
 ## Rules that are not negotiable
 
@@ -49,6 +49,12 @@ the first thing to read before proposing anything architectural.
   rather than everything. One exception: `suburb_metrics_ts` has no RLS, because
   TimescaleDB does not support it on compressed chunks (D43). A CHECK constraint
   pins that table to the system tenant instead — do not drop it.
+- **Every job payload extends `tenantJobSchema`** (D49). The producer stamps the
+  tenant from the `AuthContext`; the processor parses before doing anything and
+  runs its queries through `withTenant(payload.tenantId)`. A payload that fails
+  to parse throws `UnrecoverableError` — retrying will not make it valid.
+  Register a queue (in both apps) in the ticket that adds its processor, not
+  before; queue names live in `QUEUE_NAMES`.
 - **Zod at every boundary, inbound and outbound.** Parse, don't cast. The health
   endpoint parses its own response on the way out — follow that pattern.
 - **TypeScript strict**, plus `noUncheckedIndexedAccess`, `noUnusedLocals`,
@@ -65,13 +71,14 @@ pnpm build        # shared builds first; run once before typecheck on a clean cl
 pnpm dev          # api :3001, web :3000, worker (no HTTP)
 pnpm check        # typecheck + lint + format:check + test — what CI runs
 
-pnpm db:up        # Postgres + TimescaleDB + pgvector in docker
+pnpm db:up        # Postgres (TimescaleDB + pgvector) and Redis in docker
 pnpm db:generate  # schema change -> new migration (never hand-write CREATE TABLE)
 pnpm db:migrate   # apply migrations. Explicit, never on app startup (D39)
 ```
 
 The API refuses to boot without `CLERK_JWT_KEY` or `CLERK_SECRET_KEY` (see
-`apps/api/.env.example`). There is deliberately no flag that turns the guard off,
+`apps/api/.env.example`), and both API and worker refuse to boot without
+`REDIS_URL`. There is deliberately no flag that turns the guard off,
 because a flag that turns the guard off can be set in the wrong environment.
 
 `pnpm db:bootstrap` is a one-time command that created the initial migration
@@ -92,7 +99,7 @@ copy `apps/api/vitest.config.ts` rather than writing a fresh one.
 ## Where things are going
 
 Phase order and ticket acceptance criteria are in `docs/05-roadmap-and-phases.md`.
-P0-1 (scaffold), P0-2 (database) and P0-3 (auth) are done. P0-5 — the LangGraph.js durable-interrupt spike — is
+P0-1 (scaffold), P0-2 (database), P0-3 (auth) and P0-4 (Redis + BullMQ) are done. P0-5 — the LangGraph.js durable-interrupt spike — is
 the gate ticket: if it fails, the orchestrator design changes and Phase 1 waits.
 Keep the orchestrator behind the narrow `runStage(taskId, stage) -> StageResult`
 interface so it stays swappable.

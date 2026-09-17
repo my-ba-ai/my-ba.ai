@@ -9,43 +9,47 @@ Locked from `Approval Gate & Suburb Drawer v3 Light`. Light mode only. Bloomberg
 ```css
 :root {
   /* Canvas & surfaces */
-  --canvas:        #F1F4FA;  /* page background */
-  --surface:       #FFFFFF;  /* panels, cards, drawer */
-  --surface-sunk:  #FAFBFD;  /* stat tiles, sidebar, metric cards */
-  --surface-inset: #F2F5F9;  /* segmented control track */
+  --canvas: #f1f4fa; /* page background */
+  --surface: #ffffff; /* panels, cards, drawer */
+  --surface-sunk: #fafbfd; /* stat tiles, sidebar, metric cards */
+  --surface-inset: #f2f5f9; /* segmented control track */
 
   /* Borders */
-  --border:        #E2E8F1;  /* panel outline */
-  --border-soft:   #EDF1F6;  /* internal dividers */
-  --border-card:   #E6EBF3;  /* card / row outline */
-  --border-strong: #D5DEEA;  /* inputs, secondary buttons */
+  --border: #e2e8f1; /* panel outline */
+  --border-soft: #edf1f6; /* internal dividers */
+  --border-card: #e6ebf3; /* card / row outline */
+  --border-strong: #d5deea; /* inputs, secondary buttons */
 
   /* Ink */
-  --ink:           #101B2D;  /* primary text, headings, key numbers */
-  --ink-2:         #2C3A4F;  /* body copy in tinted blocks */
-  --ink-3:         #33415A;  /* table values */
-  --ink-muted:     #5B6B82;  /* secondary text, section labels */
-  --ink-dim:       #6C7C93;  /* mono micro-labels (min size 10px) */
+  --ink: #101b2d; /* primary text, headings, key numbers */
+  --ink-2: #2c3a4f; /* body copy in tinted blocks */
+  --ink-3: #33415a; /* table values */
+  --ink-muted: #5b6b82; /* secondary text, section labels */
+  --ink-dim: #6c7c93; /* mono micro-labels (min size 10px) */
 
   /* Accent */
-  --accent:        #0EA5A0;  /* teal — primary interactive */
-  --accent-deep:   #0B7F7B;  /* teal text on white (AA) */
-  --accent-alt:    #5B5BD6;  /* indigo — secondary/agent */
-  --accent-alt-deep:#4F46E5; /* indigo text on white (AA) */
-  --accent-grad:   linear-gradient(135deg, #0EA5A0, #5B5BD6);
-  --accent-grad-cta: linear-gradient(135deg, #0EA5A0, #2D8FD6);
+  --accent: #0ea5a0; /* teal — primary interactive */
+  --accent-deep: #0b7f7b; /* teal text on white (AA) */
+  --accent-alt: #5b5bd6; /* indigo — secondary/agent */
+  --accent-alt-deep: #4f46e5; /* indigo text on white (AA) */
+  --accent-grad: linear-gradient(135deg, #0ea5a0, #5b5bd6);
+  --accent-grad-cta: linear-gradient(135deg, #0ea5a0, #2d8fd6);
 
   /* Semantic */
-  --pos:           #15803D;
-  --neg:           #C42B2B;
-  --neg-bg:        #FDF2F2;
-  --neg-border:    #F6C9C9;
-  --warn:          #96560A;
-  --warn-border:   #EBCB94;
+  --pos: #15803d;
+  --neg: #c42b2b;
+  --neg-bg: #fdf2f2;
+  --neg-border: #f6c9c9;
+  --warn: #96560a;
+  --warn-border: #ebcb94;
 
   /* Score-breakdown ramp (6 criteria, teal→indigo) */
-  --seg-1: #0EA5A0; --seg-2: #128FB4; --seg-3: #2D7FD0;
-  --seg-4: #4A6FDD; --seg-5: #5B5BD6; --seg-6: #7B5BD0;
+  --seg-1: #0ea5a0;
+  --seg-2: #128fb4;
+  --seg-3: #2d7fd0;
+  --seg-4: #4a6fdd;
+  --seg-5: #5b5bd6;
+  --seg-6: #7b5bd0;
 }
 ```
 
@@ -59,16 +63,16 @@ Rules: one accent gradient per screen, used on the primary CTA and at most one i
 - **Numbers, codes, system labels:** JetBrains Mono — 400, 500, 600. Always `font-variant-numeric: tabular-nums`.
 - Monospace is mandatory for: all metric values, scores, postcodes, SA2 codes, run IDs, timestamps, token/cost figures, and uppercase micro-labels.
 
-| Role | Font | Size | Weight | Notes |
-|---|---|---|---|---|
-| Page headline | Space Grotesk | 32px | 600 | `letter-spacing:-0.02em`, line-height 1.18 |
-| Section heading | Space Grotesk | 23px | 600 | drawer/state headings |
-| Card title | Space Grotesk | 14px | 600 | |
-| Body | Space Grotesk | 14–14.5px | 400 | line-height 1.6, max 64ch |
-| Secondary body | Space Grotesk | 12.5px | 400 | line-height 1.55 |
-| Table value | JetBrains Mono | 13–13.5px | 500–600 | |
-| Metric value | JetBrains Mono | 18–21px | 600 | |
-| Micro-label | JetBrains Mono | 10–10.5px | 500 | uppercase, `letter-spacing:0.09em`, colour `--ink-dim` |
+| Role            | Font           | Size      | Weight  | Notes                                                  |
+| --------------- | -------------- | --------- | ------- | ------------------------------------------------------ |
+| Page headline   | Space Grotesk  | 32px      | 600     | `letter-spacing:-0.02em`, line-height 1.18             |
+| Section heading | Space Grotesk  | 23px      | 600     | drawer/state headings                                  |
+| Card title      | Space Grotesk  | 14px      | 600     |                                                        |
+| Body            | Space Grotesk  | 14–14.5px | 400     | line-height 1.6, max 64ch                              |
+| Secondary body  | Space Grotesk  | 12.5px    | 400     | line-height 1.55                                       |
+| Table value     | JetBrains Mono | 13–13.5px | 500–600 |                                                        |
+| Metric value    | JetBrains Mono | 18–21px   | 600     |                                                        |
+| Micro-label     | JetBrains Mono | 10–10.5px | 500     | uppercase, `letter-spacing:0.09em`, colour `--ink-dim` |
 
 Minimum text size 10px, and only for uppercase mono labels. Body never below 12.5px.
 
@@ -86,6 +90,7 @@ Minimum text size 10px, and only for uppercase mono labels. Body never below 12.
 ## 4. Components
 
 **Button** — `10px` radius, `11px 20px` (md).
+
 - Primary: `--accent-grad`, white text, CTA glow.
 - Secondary: white, `1px solid --border-strong`, `--ink-3`; hover borders to `--accent-alt`.
 - Disabled: `#EDF1F6` bg, `#98A5B7` text, `cursor:not-allowed`.
@@ -107,11 +112,12 @@ Minimum text size 10px, and only for uppercase mono labels. Body never below 12.
 **Sticky action bar** — status text on the left (kept/excluded counts, or the validation/permission message), secondary then primary on the right.
 
 **Empty / Error / Loading / Validation / Permission-denied** — every screen ships all five.
-- Empty: state *why* nothing matched, with the binding constraint and a quantified suggestion.
+
+- Empty: state _why_ nothing matched, with the binding constraint and a quantified suggestion.
 - Error: name the failing node in mono, state that nothing was written or approved, show the raw error line, offer log + retry.
 - Loading: shimmer skeletons matching the real layout, plus a mono progress line.
 - Validation: inline in the action bar, red, primary disabled.
-- Permission denied: amber LOCKED chip naming who *can* act.
+- Permission denied: amber LOCKED chip naming who _can_ act.
 
 ---
 
@@ -123,7 +129,7 @@ Minimum text size 10px, and only for uppercase mono labels. Body never below 12.
 
 ## 6. Voice
 
-Plain, factual, quantified. State what a control will do before it is pressed ("Approving locks this shortlist and starts trend analysis"). Explicitly state what will *not* happen ("Nothing is bought, offered on, or committed"). No exclamation, no encouragement, no hedging.
+Plain, factual, quantified. State what a control will do before it is pressed ("Approving locks this shortlist and starts trend analysis"). Explicitly state what will _not_ happen ("Nothing is bought, offered on, or committed"). No exclamation, no encouragement, no hedging.
 
 ---
 

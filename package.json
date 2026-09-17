@@ -2,12 +2,7 @@
   "name": "my-ba-ai",
   "version": "0.0.0",
   "private": true,
-  "description": "my-ba.ai \u2014 AU investment property suburb-selection and agent-outreach SaaS",
-  "packageManager": "pnpm@10.28.0",
-  "engines": {
-    "node": ">=22.12.0",
-    "pnpm": ">=10.0.0"
-  },
+  "description": "my-ba.ai — AU investment property suburb-selection and agent-outreach SaaS",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -27,11 +22,16 @@
     "clean": "turbo run clean"
   },
   "devDependencies": {
-    "oxfmt": "^0.2.0",
+    "oxfmt": "^0.68.0",
     "oxlint": "^1.0.0",
     "turbo": "^2.5.0",
     "typescript": "^5.9.0"
   },
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.28.0",
   "pnpm": {
     "onlyBuiltDependencies": [
       "@swc/core",
