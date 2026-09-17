@@ -152,11 +152,30 @@ The Nest apps compile to CommonJS with decorator metadata. Vitest transforms the
 through SWC because esbuild does not emit that metadata — if you add a Nest app,
 copy `apps/api/vitest.config.ts` rather than writing a fresh one.
 
+## When a ticket is done
+
+A ticket isn't finished until the docs that describe project state agree with
+the code. In the same change that completes it, update all of these:
+
+1. `README.md` → **Status**: add the ticket as complete (one line on what landed)
+   and correct "Next up". Also update **Layout**, **Getting started** and
+   **Scripts** if the ticket added a package, an env file or a command.
+2. `docs/05-roadmap-and-phases.md`: mark the ticket **Done.**
+3. `AGENTS.md` → **Where things are going**: the done list and what's next.
+4. `docs/04-decisions-log.md`: any decision the ticket settled (e.g.
+   PROVISIONAL → LOCKED) plus a changelog row.
+
+Only mark a ticket done once its acceptance criteria were actually verified —
+say how (test name, command, who ran it). If verification is still pending,
+say that instead.
+
 ## Where things are going
 
 Phase order and ticket acceptance criteria are in `docs/05-roadmap-and-phases.md`.
-P0-1 (scaffold), P0-2 (database), P0-3 (auth) and P0-4 (Redis + BullMQ) are done. P0-5 — the LangGraph.js durable-interrupt spike — is
-the gate ticket: if it fails, the orchestrator design changes and Phase 1 waits.
+P0-1 (scaffold), P0-2 (database), P0-3 (auth), P0-4 (Redis + BullMQ) and P0-5
+(LangGraph.js durable-interrupt spike) are done; the P0-5 gate passed, so D22 is
+LOCKED and Phase 1 is unblocked. Next is P0-6 (Next.js shell); P0-7 (CI
+integration job) and P0-8 (secret scanning) are open follow-ups.
 Keep the orchestrator behind the narrow `Orchestrator` interface in
 `packages/orchestrator/src/stage.ts` (`runStage({ tenantId, taskId, stage }) -> StageResult`)
 so it stays swappable. Never import `@langchain/*` outside that package.
