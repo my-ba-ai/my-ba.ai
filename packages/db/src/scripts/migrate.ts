@@ -1,6 +1,6 @@
-import path from "node:path"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
+import path from "node:path"
 import { Pool, type PoolClient } from "pg"
 import { MIGRATION_ADVISORY_LOCK_KEY } from "../constants"
 import { loadEnvFiles } from "../env"
@@ -49,7 +49,7 @@ async function acquireLock(client: PoolClient): Promise<void> {
   const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS
   let announced = false
 
-  for (;;) {
+  const poll = async (): Promise<void> => {
     const result = await client.query<{ locked: boolean }>(
       "SELECT pg_try_advisory_lock($1) AS locked",
       [MIGRATION_ADVISORY_LOCK_KEY],
@@ -82,7 +82,10 @@ async function acquireLock(client: PoolClient): Promise<void> {
     }
 
     await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_INTERVAL_MS))
+    return poll()
   }
+
+  await poll()
 }
 
 async function appliedMigrations(client: PoolClient): Promise<Set<string>> {
@@ -137,7 +140,7 @@ async function main(): Promise<void> {
     const reason = error instanceof Error ? error.message : String(error)
     throw new Error(
       `Could not connect to ${host} within ${CONNECT_TIMEOUT_MS / 1000}s: ${reason}\n` +
-        "Is the database up? Try: docker compose ps  (and 'pnpm db:up' if not).",
+        "Is the database up? Try: docker compose ps  (and 'pnpm db:up' if not).", { cause: error },
     )
   }
 

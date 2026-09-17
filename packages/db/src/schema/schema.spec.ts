@@ -3,11 +3,11 @@ import { getTableConfig, PgTable } from "drizzle-orm/pg-core"
 import { describe, expect, it } from "vitest"
 import * as schema from "./index"
 
-const tables = Object.values(schema).filter((value): value is PgTable => is(value, PgTable))
+const tables = Object.values(schema).filter((value) => is(value, PgTable)) as PgTable[]
 
 describe("schema", () => {
   it("exports every table", () => {
-    expect(tables.map(getTableName).sort()).toEqual([
+    expect(tables.map(getTableName).toSorted()).toEqual([
       "purchase_tasks",
       "suburb_metrics_ts",
       "suburbs",
