@@ -18,6 +18,11 @@ the first thing to read before proposing anything architectural.
 
 ## Rules that are not negotiable
 
+- **Never write a secret, key, token or credential into any tracked file.** Not
+  real, not "test", not a format-valid dummy, not "just public". See
+  [Secrets and credentials](#secrets-and-credentials) below. This rule outranks
+  "make CI green".
+
 - **Never import across workspace boundaries by relative path.** `packages/shared`
   compiles to `dist` and apps depend on its `build`. Import `@my-ba/shared`, never
   `../../packages/shared/src`. Turbo orders the graph; a relative import silently
@@ -62,6 +67,57 @@ the first thing to read before proposing anything architectural.
 - **Filenames kebab-case**, enforced by Oxlint.
 - **Don't relitigate a LOCKED decision** in `docs/04-decisions-log.md` without
   saying explicitly that you are doing so, and why.
+
+## Secrets and credentials
+
+This applies to every agent and every file git tracks: source, tests, fixtures,
+workflows, Dockerfiles, docs, READMEs, commit messages and PR descriptions.
+
+**Never write any of these as a literal:**
+
+- API keys and tokens of any provider or prefix — Clerk `pk_*`/`sk_*`, HtAG,
+  Domain, Apify, Resend/SendGrid, Cloudflare R2, GitHub, AWS, etc.
+- Placeholders shaped like a real key — a dummy that passes a provider's format
+  check (e.g. `pk_test_` + base64) is still a key-shaped literal and is banned.
+  "The publishable key is public by design" does not make it OK to commit.
+- Connection strings with passwords for any non-local host, private keys,
+  certificates, JWTs, webhook signing secrets, session cookies.
+- Values copied from `.env`, `.env.local`, a dashboard, terminal output or chat.
+
+**Where values go instead:**
+
+| Context           | Mechanism                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| Local dev         | `.env` / `.env.local` (gitignored). Never read them aloud into code, docs or chat.              |
+| CI                | `${{ vars.NAME }}` (public config) or `${{ secrets.NAME }}` (anything sensitive). Never inline. |
+| Deployed envs     | The host's secret store (Railway/Render), later GitHub Environments per stage.                  |
+| Tests             | Read from env; skip or fail with a clear message when absent. Mock the provider, not the key.   |
+| `.env.example`    | Variable **names** with obvious non-functional placeholders only: `pk_test_replace_me`.         |
+
+**The only literals allowed** are the local docker-compose credentials that
+already exist (`postgres:postgres`, `my_ba_app:app` on `localhost`). They
+unlock nothing outside a developer's own machine. Don't add new ones.
+
+**When a build or test fails because a value is missing:**
+
+1. Don't hardcode it to get past the failure, even temporarily or "for CI only".
+2. Wire the code or workflow to read it from env/`vars`/`secrets`, and add a
+   fail-fast check that names the missing variable and where to set it.
+3. Tell the user exactly which variable to create and where (e.g. *Settings →
+   Secrets and variables → Actions*). Creating it is their step, not yours.
+
+**If you notice a secret already committed** — in the working tree or git
+history — stop and tell the user. Don't try to "fix" it by editing the file
+alone: the value has to be rotated at the provider, and history rewriting is the
+user's call.
+
+**Before you finish any change**, check your own diff for key-shaped strings:
+
+```bash
+git diff | grep -nE '(pk|sk|rk)_(test|live)_|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|-----BEGIN .*PRIVATE KEY|xox[abpr]-|eyJ[A-Za-z0-9_-]{10,}\.'
+```
+
+Anything it prints is either removed or explicitly approved by the user.
 
 ## Commands
 
