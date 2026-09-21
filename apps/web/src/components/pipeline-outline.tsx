@@ -13,7 +13,7 @@ export function PipelineOutline({ stages }: Readonly<{ stages: readonly TaskStat
         {stages.map((stage) => (
           <li
             key={stage}
-            className="rounded-full border border-neutral-200 px-3 py-1 text-sm text-neutral-700 dark:border-neutral-800 dark:text-neutral-300"
+            className="rounded-full border border-neutral-200 px-3 py-1 text-sm text-neutral-700"
           >
             {stage.replaceAll("_", " ").toLowerCase()}
           </li>

@@ -17,7 +17,8 @@
     "**/.turbo/**",
     "**/node_modules/**",
     "**/coverage/**",
-    "docs/prototypes/**"
+    "docs/prototypes/**",
+    "apps/web/src/components/ui/**"
   ],
   "rules": {
     "no-console": "off",

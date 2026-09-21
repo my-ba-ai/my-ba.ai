@@ -1,6 +1,6 @@
 # Property Screening Platform — Design System v1
 
-Locked from `Approval Gate & Suburb Drawer v3 Light`. Light mode only. Bloomberg-terminal density with a modern, AI-native surface: white panels, teal→indigo accent, monospace for every number.
+Locked from `Approval Gate & Suburb Drawer v3 Light`. Light mode only. Bloomberg-terminal density with a modern, AI-native surface: white panels, teal→indigo accent, tabular figures for every number.
 
 ---
 
@@ -59,22 +59,22 @@ Rules: one accent gradient per screen, used on the primary CTA and at most one i
 
 ## 2. Type
 
-- **UI / headings:** Space Grotesk — 400, 500, 600.
-- **Numbers, codes, system labels:** JetBrains Mono — 400, 500, 600. Always `font-variant-numeric: tabular-nums`.
-- Monospace is mandatory for: all metric values, scores, postcodes, SA2 codes, run IDs, timestamps, token/cost figures, and uppercase micro-labels.
+- **One family: Manrope** — 400, 500, 600 (D55; replaced Space Grotesk + JetBrains Mono on 2026-09-21. Lato was tried and reverted the same day, D56).
+- **Data text** (utility `font-data`): Manrope with `font-variant-numeric: tabular-nums`, always. Tabular figures are mandatory for: all metric values, scores, postcodes, SA2 codes, run IDs, timestamps, token/cost figures, and uppercase micro-labels.
+- **Raw machine output** (utility `font-mono`): the OS monospace stack, no webfont. Only for JSON payloads, raw error lines and log excerpts.
 
 | Role            | Font           | Size      | Weight  | Notes                                                  |
 | --------------- | -------------- | --------- | ------- | ------------------------------------------------------ |
-| Page headline   | Space Grotesk  | 32px      | 600     | `letter-spacing:-0.02em`, line-height 1.18             |
-| Section heading | Space Grotesk  | 23px      | 600     | drawer/state headings                                  |
-| Card title      | Space Grotesk  | 14px      | 600     |                                                        |
-| Body            | Space Grotesk  | 14–14.5px | 400     | line-height 1.6, max 64ch                              |
-| Secondary body  | Space Grotesk  | 12.5px    | 400     | line-height 1.55                                       |
-| Table value     | JetBrains Mono | 13–13.5px | 500–600 |                                                        |
-| Metric value    | JetBrains Mono | 18–21px   | 600     |                                                        |
-| Micro-label     | JetBrains Mono | 10–10.5px | 500     | uppercase, `letter-spacing:0.09em`, colour `--ink-dim` |
+| Page headline   | Manrope        | 32px      | 600     | `letter-spacing:-0.02em`, line-height 1.18             |
+| Section heading | Manrope        | 23px      | 600     | drawer/state headings                                  |
+| Card title      | Manrope        | 14px      | 600     |                                                        |
+| Body            | Manrope        | 14–14.5px | 400     | line-height 1.6, max 64ch                              |
+| Secondary body  | Manrope        | 12.5px    | 400     | line-height 1.55                                       |
+| Table value     | Manrope (data) | 13–13.5px | 500–600 |                                                        |
+| Metric value    | Manrope (data) | 18–21px   | 600     |                                                        |
+| Micro-label     | Manrope (data) | 10–10.5px | 500     | uppercase, `letter-spacing:0.09em`, colour `--ink-dim` |
 
-Minimum text size 10px, and only for uppercase mono labels. Body never below 12.5px.
+Minimum text size 10px, and only for uppercase data labels. Body never below 12.5px.
 
 ---
 

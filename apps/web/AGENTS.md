@@ -61,5 +61,21 @@ builder** for both `dev` and `build`.
 - `typedRoutes` is on. Route strings are typechecked; a broken link is a build error.
 - Visual direction is in `docs/07-design-brief.md` and `docs/design-system.md`, with a
   reference prototype at `docs/prototypes/`. Match those rather than inventing styling.
+- `src/components/ui/` is vendored shadcn source on Base UI (`components.json`, style
+  `base-vega`). Add or update it with `pnpm dlx shadcn@latest add <name>`, never by hand,
+  and never edit it to reach a design token: remap in the `@theme inline` block of
+  `globals.css` instead (D54). The folder is excluded from oxlint for the same reason:
+  lint findings there would need edits that the next regenerate reverts. Design-system components (gradient CTA, status pill, stat
+  tile) are our own wrappers composed over these primitives. Base UI composes with
+  `render={<Button />}`, not Radix's `asChild`. Forms use `field`, not `form`.
+- TanStack Table is **v9** (`useTable`, `tableFeatures`, `createColumnHelper<features, row>`,
+  `table.FlexRender`). Most examples online and in training data are v8 (`useReactTable`,
+  `getCoreRowModel`) and won't compile here. The package ships its own agent docs: read
+  `node_modules/@tanstack/react-table/skills/*/SKILL.md` before writing a table.
+- Type is Manrope only (D55). Numbers, codes, IDs and uppercase micro-labels use
+  `font-data` (tabular figures). `font-mono` is for raw machine output only (JSON, error
+  lines, logs). Never put a metric in `font-mono`.
+- Light mode only. Don't add `dark:` classes or a theme provider.
+- `/dev/ui` is the component gallery and the D52 spike. It 404s in production.
 - Tests are Vitest + Testing Library, jsdom environment, named `*.test.tsx`
   alongside the component. Nest's `*.spec.ts` convention is deliberately different.

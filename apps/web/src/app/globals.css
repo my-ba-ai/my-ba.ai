@@ -1,9 +1,297 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-@theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-}
+/* ---------------------------------------------------------------------------
+   Design system v1 - docs/design-system.md. Light mode only.
+
+   Two layers, and the split matters:
+
+     :root          design-system.md §1 tokens, verbatim, under our own names.
+                    This is the source of truth. Read it, cite it, extend it.
+
+     @theme inline  translation layer. Maps our names onto the Tailwind and
+                    shadcn utility names that the vendored components in
+                    src/components/ui/ are compiled against.
+
+   Never edit a vendored component to reach a design token - remap it here.
+   Every `shadcn add` and `--reinstall` regenerates that source and would
+   silently undo the edit.
+   --------------------------------------------------------------------------- */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+
+  /* Canvas & surfaces */
+  --canvas: #f1f4fa; /* page background */
+  --surface: #ffffff; /* panels, cards, drawer */
+  --surface-sunk: #fafbfd; /* stat tiles, sidebar, metric cards */
+  --surface-inset: #f2f5f9; /* segmented control track */
+
+  /* Borders */
+  --border: #e2e8f1; /* panel outline */
+  --border-soft: #edf1f6; /* internal dividers */
+  --border-card: #e6ebf3; /* card / row outline */
+  --border-strong: #d5deea; /* inputs, secondary buttons */
+
+  /* Ink */
+  --ink: #101b2d; /* primary text, headings, key numbers */
+  --ink-2: #2c3a4f; /* body copy in tinted blocks */
+  --ink-3: #33415a; /* table values */
+  --ink-muted: #5b6b82; /* secondary text, section labels */
+  --ink-dim: #6c7c93; /* mono micro-labels (min size 10px) */
+
+  /* Accent */
+  --accent: #0ea5a0; /* teal - primary interactive */
+  --accent-deep: #0b7f7b; /* teal text on white (AA) */
+  --accent-alt: #5b5bd6; /* indigo - secondary/agent */
+  --accent-alt-deep: #4f46e5; /* indigo text on white (AA) */
+  --accent-grad: linear-gradient(135deg, #0ea5a0, #5b5bd6);
+  --accent-grad-cta: linear-gradient(135deg, #0ea5a0, #2d8fd6);
+
+  /* Semantic */
+  --pos: #15803d;
+  --neg: #c42b2b;
+  --neg-bg: #fdf2f2;
+  --neg-border: #f6c9c9;
+  --warn: #96560a;
+  --warn-border: #ebcb94;
+
+  /* Score-breakdown ramp (6 criteria, teal->indigo) */
+  --seg-1: #0ea5a0;
+  --seg-2: #128fb4;
+  --seg-3: #2d7fd0;
+  --seg-4: #4a6fdd;
+  --seg-5: #5b5bd6;
+  --seg-6: #7b5bd0;
+
+  /* §3 radius. Discrete values, not multiplier math - the design system
+     specifies each step. --radius stays the button value because that is
+     what the vendored components reach for most. */
+  --radius: 10px; /* buttons */
+  --radius-control: 9px; /* small controls */
+  --radius-card: 13px; /* cards, rows */
+  --radius-card-lg: 14px;
+  --radius-panel: 18px; /* panels, drawer */
+  --radius-pill: 999px; /* status pills */
+
+  /* §3 elevation */
+  --elevation-panel: 0 40px 80px -48px rgb(16 27 45 / 0.35);
+  --elevation-hover: 0 12px 26px -20px rgb(16 27 45 / 0.5);
+  --elevation-cta: 0 10px 24px -14px rgb(14 165 160 / 0.9);
+
+  /* Sticky bar treatment (§3) */
+  --sticky-bg: rgb(255 255 255 / 0.9);
+  --sticky-blur: 14px;
+}
+
+@theme inline {
+  /* --- Type (§2, D55) --------------------------------------------------
+     One family. `font-data` is the role design-system.md used to call
+     "mono": numbers, codes and micro-labels, always in tabular figures.
+     `font-mono` is real monospace from the OS stack, for raw machine output
+     only (JSON, error lines, log excerpts); no webfont is loaded for it. */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-data: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-heading: var(--font-sans);
+
+  --text-headline: 2rem; /* 32px */
+  --text-headline--line-height: 1.18;
+  --text-headline--letter-spacing: -0.02em;
+  --text-headline--font-weight: 600;
+
+  --text-section: 1.4375rem; /* 23px */
+  --text-section--line-height: 1.25;
+  --text-section--font-weight: 600;
+
+  --text-card-title: 0.875rem; /* 14px */
+  --text-card-title--font-weight: 600;
+
+  --text-body: 0.875rem; /* 14px */
+  --text-body--line-height: 1.6;
+  --text-body-lg: 0.90625rem; /* 14.5px */
+  --text-body-lg--line-height: 1.6;
+
+  --text-body-sm: 0.78125rem; /* 12.5px - body floor */
+  --text-body-sm--line-height: 1.55;
+
+  --text-value: 0.8125rem; /* 13px  - table value */
+  --text-value-lg: 0.84375rem; /* 13.5px */
+
+  --text-metric-sm: 1.125rem; /* 18px */
+  --text-metric-sm--font-weight: 600;
+  --text-metric: 1.3125rem; /* 21px */
+  --text-metric--font-weight: 600;
+
+  --text-micro: 0.625rem; /* 10px - uppercase mono only */
+  --text-micro--letter-spacing: 0.09em;
+  --text-micro--font-weight: 500;
+  --text-micro-lg: 0.65625rem; /* 10.5px */
+  --text-micro-lg--letter-spacing: 0.09em;
+  --text-micro-lg--font-weight: 500;
+
+  /* --- Colour, mapped onto our tokens ---------------------------------
+     Left side: the utility name a vendored component uses.
+     Right side: what it means in this design system.
+
+     Two of these are deliberate reinterpretations, not typos:
+       --color-accent     shadcn means "subtle hover surface", we mean teal.
+                          The utility keeps shadcn's meaning; raw --accent
+                          stays teal for our own CTAs and identity marks.
+       --color-primary    this is where the teal actually lands, so
+                          bg-primary on a vendored Button is correct. */
+  --color-background: var(--canvas);
+  --color-foreground: var(--ink);
+
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+
+  --color-primary: var(--accent);
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: var(--surface);
+  --color-secondary-foreground: var(--ink-3);
+
+  --color-muted: var(--surface-sunk);
+  --color-muted-foreground: var(--ink-muted);
+
+  --color-accent: var(--surface-inset);
+  --color-accent-foreground: var(--ink);
+
+  --color-destructive: var(--neg);
+  --color-destructive-foreground: #ffffff;
+
+  --color-border: var(--border-card);
+  --color-input: var(--border-strong);
+  --color-ring: var(--accent);
+
+  /* Named passthroughs so our own components use utilities, not arbitrary
+     values, for the tokens that have no shadcn equivalent. */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-surface-inset: var(--surface-inset);
+  --color-border-soft: var(--border-soft);
+  --color-border-card: var(--border-card);
+  --color-border-strong: var(--border-strong);
+  --color-border-panel: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-dim: var(--ink-dim);
+  --color-accent-teal: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-alt: var(--accent-alt);
+  --color-accent-alt-deep: var(--accent-alt-deep);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-neg-bg: var(--neg-bg);
+  --color-neg-border: var(--neg-border);
+  --color-warn: var(--warn);
+  --color-warn-border: var(--warn-border);
+
+  /* Score-breakdown ramp. chart-1..5 exist because vendored components and
+     future charts reach for them; seg-1..6 is the name the design system
+     uses and the one to write in our own markup. */
+  --color-seg-1: var(--seg-1);
+  --color-seg-2: var(--seg-2);
+  --color-seg-3: var(--seg-3);
+  --color-seg-4: var(--seg-4);
+  --color-seg-5: var(--seg-5);
+  --color-seg-6: var(--seg-6);
+  --color-chart-1: var(--seg-1);
+  --color-chart-2: var(--seg-2);
+  --color-chart-3: var(--seg-3);
+  --color-chart-4: var(--seg-4);
+  --color-chart-5: var(--seg-5);
+
+  /* --- Radius ----------------------------------------------------------
+     rounded-4xl is what badge.tsx ships with, and §4 puts status pills at
+     999px, so that one lines up for free. */
+  --radius-sm: var(--radius-control); /* 9px  */
+  --radius-md: var(--radius); /* 10px */
+  --radius-lg: var(--radius-card); /* 13px */
+  --radius-xl: var(--radius-card-lg); /* 14px */
+  --radius-2xl: var(--radius-panel); /* 18px */
+  --radius-3xl: var(--radius-panel); /* 18px */
+  --radius-4xl: var(--radius-pill); /* 999px - status pill */
+
+  /* --- Elevation ------------------------------------------------------- */
+  --shadow-panel: var(--elevation-panel);
+  --shadow-hover: var(--elevation-hover);
+  --shadow-cta: var(--elevation-cta);
+
+  /* --- Motion (§5). Nothing else animates. --------------------------- */
+  --animate-pulse-live: pulse-live 1.7s ease-in-out infinite;
+  --animate-shim: shim 1.25s linear infinite;
+  --animate-drift: drift 14s ease-in-out infinite;
+  --animate-slidein: slidein 0.22s ease-out;
+}
+
+@keyframes pulse-live {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.88);
+  }
+}
+
+@keyframes shim {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(2%, -1.5%, 0);
+  }
+}
+
+@keyframes slidein {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+
+  /* §2: data text and machine output always use tabular figures. */
+  .font-data,
+  .font-mono,
+  code,
+  kbd,
+  samp,
+  pre {
+    font-variant-numeric: tabular-nums;
+  }
 }

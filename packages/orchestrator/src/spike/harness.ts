@@ -21,13 +21,15 @@ loadEnvFiles(path.resolve(__dirname, "../.."))
 const [mode, tenantId, taskId, decisionJson] = process.argv.slice(2)
 const probeFile = process.env.SPIKE_PROBE_FILE
 
+function emit(value: unknown): void {
+  process.stdout.write(`RESULT ${JSON.stringify(value)}\n`)
+}
+
 async function main(): Promise<void> {
   const ref = StageRef.parse({ tenantId, taskId, stage: "spike" })
   const orchestrator = LangGraphOrchestrator.fromEnv(process.env, (node) => {
     if (probeFile) appendFileSync(probeFile, `${process.pid} ${node}\n`)
   })
-
-  const emit = (value: unknown) => process.stdout.write(`RESULT ${JSON.stringify(value)}\n`)
 
   switch (mode) {
     case "start": {

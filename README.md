@@ -99,6 +99,13 @@ Phase 0 — Foundation:
   a fresh process with state intact (`pnpm test:integration`). D22 is now
   LOCKED; Phase 1 is unblocked.
 
+- **P0-5.5 complete:** UI foundation. 24 shadcn primitives on Base UI in
+  `apps/web/src/components/ui/`, design-system tokens in `globals.css` (light only,
+  D54), Manrope (D55), react-hook-form + Zod, TanStack Table.
+  Everything is rendered at [`/dev/ui`](http://localhost:3000/dev/ui) in dev.
+  The Base UI Combobox/Slider spike passed all 8 keyboard checks, so D52 is
+  LOCKED. Re-run that checklist after any `@base-ui/react` upgrade.
+
 Next up: **P0-6** (Next.js shell — auth-gated routes, nav, empty task list).
 Open follow-ups: **P0-7** (run the P0-5 suite in CI) and **P0-8** (gitleaks
 secret scanning in CI + pre-commit).

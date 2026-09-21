@@ -74,13 +74,13 @@ export default async function HomePage() {
         <h1 className="text-3xl font-semibold tracking-tight">{APP_NAME}</h1>
 
         {result.ok ? (
-          <p className="text-neutral-600 dark:text-neutral-400">
+          <p className="text-neutral-600">
             Signed in as <span className="font-medium">{result.identity.email}</span> · tenant{" "}
             <code className="text-xs">{result.identity.tenantId}</code>
             {result.identity.provisioned ? " (created just now)" : null}
           </p>
         ) : result.stage === "clerk" ? (
-          <p className="text-neutral-600 dark:text-neutral-400">
+          <p className="text-neutral-600">
             Task list and task detail land in P0-6.{" "}
             <Link href="/sign-in" className="underline underline-offset-4">
               Sign in
@@ -88,11 +88,9 @@ export default async function HomePage() {
             .
           </p>
         ) : (
-          <div className="space-y-1 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-900 dark:bg-amber-950">
+          <div className="space-y-1 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
             <p className="font-medium">Clerk session is fine. {STAGE_SUMMARY[result.stage]}</p>
-            <pre className="whitespace-pre-wrap break-words text-neutral-700 dark:text-neutral-300">
-              {result.detail}
-            </pre>
+            <pre className="whitespace-pre-wrap break-words text-neutral-700">{result.detail}</pre>
           </div>
         )}
       </header>
