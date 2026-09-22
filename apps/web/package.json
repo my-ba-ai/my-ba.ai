@@ -7,6 +7,7 @@
     "dev": "next dev --port 3000",
     "start": "next start --port 3000",
     "typecheck": "next typegen && tsc -p tsconfig.json --noEmit",
+    "lint:tailwind": "node scripts/check-tailwind-canonical.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "rm -rf .next .turbo *.tsbuildinfo"

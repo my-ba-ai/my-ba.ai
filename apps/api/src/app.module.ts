@@ -4,6 +4,7 @@ import { AuthModule } from "./auth/auth.module"
 import { DatabaseModule } from "./database/database.module"
 import { DiagnosticsModule } from "./diagnostics/diagnostics.module"
 import { HealthModule } from "./health/health.module"
+import { PurchaseTasksModule } from "./purchase-tasks/purchase-tasks.module"
 import { QueueModule } from "./queue/queue.module"
 import { RedisModule } from "./redis/redis.module"
 
@@ -20,6 +21,7 @@ import { RedisModule } from "./redis/redis.module"
     AuthModule,
     HealthModule,
     DiagnosticsModule,
+    PurchaseTasksModule,
   ],
 })
 export class AppModule {}

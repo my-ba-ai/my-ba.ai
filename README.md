@@ -40,6 +40,7 @@ cp packages/orchestrator/.env.example packages/orchestrator/.env
 cp apps/api/.env.example apps/api/.env
 cp apps/worker/.env.example apps/worker/.env
 cp apps/web/.env.example apps/web/.env.local   # then put your Clerk dev keys in it (P0-3)
+                    # and restrict sign-ups in the Clerk dashboard: there is no sign-up route (D58)
 
 pnpm db:up          # Postgres 17 + TimescaleDB + pgvector on :5432, Redis on :6379
 pnpm db:migrate     # Drizzle migrations, then the LangGraph checkpointer tables
@@ -106,6 +107,15 @@ Phase 0 — Foundation:
   The Base UI Combobox/Slider spike passed all 8 keyboard checks, so D52 is
   LOCKED. Re-run that checklist after any `@base-ui/react` upgrade.
 
-Next up: **P0-6** (Next.js shell — auth-gated routes, nav, empty task list).
-Open follow-ups: **P0-7** (run the P0-5 suite in CI) and **P0-8** (gitleaks
-secret scanning in CI + pre-commit).
+- **P0-6 implemented, verification pending:** Next.js shell. Deny-by-default
+  route protection in `proxy.ts` (only `/sign-in` is public), sidebar/header
+  layout with unbuilt sections disabled and labelled by phase, `/tasks` backed
+  by a real tenant-scoped `GET /api/purchase-tasks` (empty, loading and error
+  states, plus a fixture-tested task card), a placeholder `/tasks/[taskId]` that
+  404s for missing and other-tenant ids, and a split-layout sign-in. The P0-3
+  identity check moved to [`/dev/whoami`](http://localhost:3000/dev/whoami).
+  Still to run: `pnpm check`, `pnpm build` and the browser walk-through in the
+  roadmap's P0-6 acceptance criteria.
+
+Next up: finish verifying **P0-6**, then Phase 1. Open follow-ups: **P0-7** (run
+the P0-5 suite in CI) and **P0-8** (gitleaks secret scanning in CI + pre-commit).
