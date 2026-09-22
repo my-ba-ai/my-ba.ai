@@ -1,17 +1,26 @@
-import { clerkMiddleware } from "@clerk/nextjs/server"
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 
 /**
  * `proxy.ts`, not `middleware.ts` — Next 16 deprecated and renamed the
  * convention (see `node_modules/next/dist/docs/01-app/03-api-reference/
- * 03-file-conventions/proxy.md`). The old name still works; using it would
- * leave a deprecation to clean up later for no gain.
+ * 03-file-conventions/proxy.md`).
  *
- * Bare `clerkMiddleware()` on purpose: it makes the session available to server
- * components and `auth()`, and protects nothing. Route protection —
- * `createRouteMatcher`, redirect-to-sign-in, the authenticated layout — is P0-6,
- * where the routes it would protect actually exist.
+ * Deny by default: every route needs a session except the ones listed here.
+ * An allowlist of public routes fails closed when a new route is added; a
+ * blocklist of protected ones fails open.
+ *
+ * `auth.protect()` redirects a page request to NEXT_PUBLIC_CLERK_SIGN_IN_URL
+ * and answers 404 to anything else. It is the only gate on the web side, and
+ * the API's guard verifies the token again independently, so neither side
+ * trusts the other to have checked.
  */
-export default clerkMiddleware()
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)"])
+
+export default clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
+    await auth.protect()
+  }
+})
 
 export const config = {
   matcher: [

@@ -174,8 +174,13 @@ say that instead.
 Phase order and ticket acceptance criteria are in `docs/05-roadmap-and-phases.md`.
 P0-1 (scaffold), P0-2 (database), P0-3 (auth), P0-4 (Redis + BullMQ) and P0-5
 (LangGraph.js durable-interrupt spike) are done; the P0-5 gate passed, so D22 is
-LOCKED and Phase 1 is unblocked. Next is P0-6 (Next.js shell); P0-7 (CI
-integration job) and P0-8 (secret scanning) are open follow-ups.
+LOCKED and Phase 1 is unblocked. P0-6 (Next.js shell) is implemented and
+awaiting verification. After that comes Phase 1. P0-7 (CI integration job)
+and P0-8 (secret scanning) are open follow-ups.
+
+Every web route is behind a session unless it is added to the public matcher in
+`apps/web/src/proxy.ts` (D58). API reads rely on RLS alone, with no explicit
+`tenant_id` predicate, and another tenant's row is a 404 (D57).
 Keep the orchestrator behind the narrow `Orchestrator` interface in
 `packages/orchestrator/src/stage.ts` (`runStage({ tenantId, taskId, stage }) -> StageResult`)
 so it stays swappable. Never import `@langchain/*` outside that package.

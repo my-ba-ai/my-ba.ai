@@ -75,6 +75,30 @@ builder** for both `dev` and `build`.
 - Type is Manrope only (D55). Numbers, codes, IDs and uppercase micro-labels use
   `font-data` (tabular figures). `font-mono` is for raw machine output only (JSON, error
   lines, logs). Never put a metric in `font-mono`.
+- **Tailwind classes: design token first, then canonical scale, then arbitrary value.**
+  Pick the first of these that produces the value you want:
+  1. A design-system token utility from `globals.css`. Type is the named scale
+     (`text-headline`, `text-section`, `text-body`, `text-body-sm`, `text-value`,
+     `text-value-lg`, `text-micro`, `text-micro-lg`, `text-metric`), not
+     `text-[23px] font-semibold`. A type token already sets its line-height, weight
+     and tracking, so don't restate them. Colours are token names (`bg-border-soft`),
+     never the hex behind them (`bg-[#edf1f6]`).
+  2. Tailwind's canonical spelling on the default scale: `gap-0.75` not `gap-[3px]`,
+     `px-4.5` not `px-[18px]`, `max-w-100` not `max-w-[400px]`, `duration-170` not
+     `duration-[170ms]`, `bg-(image:--accent-grad)` not `bg-[image:var(--accent-grad)]`.
+     v4 spacing is `--spacing` (4px) times any multiple of 0.25, so nearly every px
+     value on the design system's 4px grid has one.
+  3. An arbitrary value, only when neither exists (`tracking-[0.09em]`,
+     `grid-cols-[88px_1fr]`, a colour with no token).
+
+  `pnpm lint` enforces 1 and 2 through `scripts/check-tailwind-canonical.mjs`, which
+  resolves against this app's compiled theme. Radius and text sizes are remapped in
+  `@theme inline` (D54), so `rounded-md` is 10px here, not Tailwind's 6px. Don't
+  reason from Tailwind's default docs. `pnpm --filter @my-ba/web lint:tailwind --fix`
+  rewrites the canonical-spelling cases. Token cases are reported only, because a
+  token replaces several classes at once and has to be applied by hand.
+  `src/components/ui/` is excluded (vendored, D54).
+
 - Light mode only. Don't add `dark:` classes or a theme provider.
 - `/dev/ui` is the component gallery and the D52 spike. It 404s in production.
 - Tests are Vitest + Testing Library, jsdom environment, named `*.test.tsx`

@@ -46,6 +46,105 @@ A **modular monolith** with clean domain boundaries (tasks, suburbs, agents, lis
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+## API module structure (`apps/api`)
+
+A UML-style component view of the NestJS app as of P0-6: each box is a Nest module or provider, and arrows show the dependencies. Solid arrows are calls on the request path. Dotted arrows are out-of-band.
+
+```mermaid
+flowchart LR
+  web["apps/web (Next.js server)<br/>apiFetch + Clerk bearer token"]
+
+  subgraph API["@my-ba/api · NestJS · global prefix /api"]
+    direction TB
+
+    subgraph AuthM["AuthModule"]
+      Guard["AuthGuard (APP_GUARD)<br/>every route unless @Public()"]
+      Verifier["TOKEN_VERIFIER<br/>ClerkTokenVerifier"]
+      Resolver["IdentityResolverService<br/>JIT provisioning (D45)"]
+      Cache["IDENTITY_CACHE<br/>RedisIdentityCache (D50)"]
+      Dir["USER_DIRECTORY<br/>ClerkUserDirectory"]
+      AuthC["AuthController<br/>GET /auth/me"]
+      AuthS["AuthService"]
+    end
+
+    subgraph PTM["PurchaseTasksModule (P0-6)"]
+      PTC["PurchaseTasksController<br/>GET /purchase-tasks<br/>GET /purchase-tasks/:taskId"]
+      PTS["PurchaseTasksService"]
+    end
+
+    subgraph DiagM["DiagnosticsModule"]
+      DiagC["DiagnosticsController<br/>POST /diagnostics/jobs"]
+      DiagS["DiagnosticsService"]
+    end
+
+    subgraph HealthM["HealthModule · @Public()"]
+      HealthC["HealthController<br/>GET /health, /health/db, /health/redis"]
+      HealthS["HealthService<br/>DatabaseHealthService<br/>RedisHealthService"]
+    end
+
+    subgraph QueueM["QueueModule · producer only"]
+      Bull["BullModule<br/>queue: diagnostics (D49)"]
+    end
+
+    subgraph GlobalM["Global modules"]
+      Config["ConfigModule<br/>.env.local, .env"]
+      DB["DatabaseModule<br/>DATABASE_POOL · DATABASE<br/>TenantDatabaseService"]
+      RedisM["RedisModule<br/>REDIS_CLIENT (fail-fast)"]
+    end
+
+    BB["Bull Board · raw Express middleware<br/>/api/admin/queues · basic auth · dev only (D48)"]
+  end
+
+  subgraph Ext["External"]
+    Clerk["Clerk<br/>JWT key / JWKS · Backend API"]
+    PG[("Postgres 17<br/>TimescaleDB · pgvector · RLS")]
+    RD[("Redis<br/>noeviction · AOF")]
+    Worker["apps/worker<br/>BullMQ processors"]
+  end
+
+  web -->|"HTTPS + Bearer"| Guard
+  web -->|"no token"| HealthC
+
+  Guard --> Verifier
+  Verifier -.->|"verify signature"| Clerk
+  Guard --> Resolver
+  Resolver --> Cache
+  Resolver --> Dir
+  Dir -.->|"email on first provision"| Clerk
+  Resolver -->|"withAuthLookup / withTenant"| DB
+
+  Guard -->|"request.auth = AuthContext"| AuthC
+  Guard -->|"request.auth = AuthContext"| PTC
+  Guard -->|"request.auth = AuthContext"| DiagC
+
+  AuthC --> AuthS
+  PTC --> PTS
+  DiagC --> DiagS
+  HealthC --> HealthS
+
+  AuthS -->|"TenantDatabaseService.run"| DB
+  PTS -->|"TenantDatabaseService.run"| DB
+  DiagS -->|"add(tenant-stamped job)"| Bull
+  HealthS --> DB
+  HealthS --> RedisM
+  Cache --> RedisM
+
+  DB -->|"app.tenant_id per transaction"| PG
+  RedisM --> RD
+  Bull --> RD
+  BB --> Bull
+  RD -.->|"consume"| Worker
+```
+
+How to read it:
+
+- **One way in.** `AuthGuard` is registered as `APP_GUARD`, so every controller is protected unless marked `@Public()` (only `HealthController` is). The guard is the only thing that builds an `AuthContext`, and controllers read it through `@CurrentUser()`.
+- **One way to the data.** Request-path services touch Postgres only through `TenantDatabaseService.run`, which sets `app.tenant_id` for the transaction so RLS applies. `IdentityResolverService` is the one exception: it runs before a tenant is known and uses `withAuthLookup` (D46).
+- **Globals.** `ConfigModule`, `DatabaseModule` and `RedisModule` are global, so feature modules inject `DATABASE`, `TenantDatabaseService` or `REDIS_CLIENT` without importing them. `QueueModule` is not global. Only modules that enqueue import it.
+- **Fail fast on Redis.** Both `REDIS_CLIENT` and the BullMQ connection disable the offline queue. A Redis outage makes the identity cache a miss (falling back to Postgres) and makes enqueueing a 5xx, instead of hanging requests.
+- **Outside the router.** Bull Board is mounted as Express middleware in `main.ts`, so the global guard doesn't cover it. It carries its own basic auth and never mounts in production.
+- **Contracts.** Request and response shapes come from `@my-ba/shared` (Zod). Schema, pool and tenant helpers come from `@my-ba/db`. The API parses its own responses before returning them.
+
 ## Stack
 
 | Component     | Choice                              | Notes                                                                                                     |

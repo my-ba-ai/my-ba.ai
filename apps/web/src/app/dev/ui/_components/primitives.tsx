@@ -185,7 +185,7 @@ export function Primitives() {
       <Row label="Sheet">
         <Sheet>
           <SheetTrigger render={<Button variant="outline" />}>Open sheet</SheetTrigger>
-          <SheetContent side="right" className="w-full sm:max-w-[500px]">
+          <SheetContent side="right" className="w-full sm:max-w-125">
             <SheetHeader>
               <SheetTitle>Suburb detail</SheetTitle>
               <SheetDescription>Side panel. §4 drawers are 500px on desktop.</SheetDescription>

@@ -95,7 +95,7 @@ export function SuburbRows({ rows }: SuburbRowsProps) {
 
   return (
     <>
-      <div role="table" aria-label="Shortlisted suburbs" className="flex flex-col gap-[7px]">
+      <div role="table" aria-label="Shortlisted suburbs" className="flex flex-col gap-1.75">
         <div role="rowgroup">
           {table.getHeaderGroups().map((group) => (
             <div key={group.id} role="row" className={cn(GRID, "px-3.5 pb-1")}>
@@ -113,7 +113,7 @@ export function SuburbRows({ rows }: SuburbRowsProps) {
                     <button
                       type="button"
                       onClick={header.column.getToggleSortingHandler()}
-                      className="inline-flex items-center gap-1 font-data text-micro-lg text-ink-dim uppercase transition-colors duration-[170ms] hover:text-ink"
+                      className="inline-flex items-center gap-1 font-data text-micro-lg text-ink-dim uppercase transition-colors duration-170 hover:text-ink"
                     >
                       <table.FlexRender header={header} />
                       {sorted === "asc" ? <ArrowUpIcon className="size-3" /> : null}
@@ -126,7 +126,7 @@ export function SuburbRows({ rows }: SuburbRowsProps) {
           ))}
         </div>
 
-        <div role="rowgroup" className="flex flex-col gap-[7px]">
+        <div role="rowgroup" className="flex flex-col gap-1.75">
           {table.getRowModel().rows.map((row) => (
             <div
               key={row.id}
@@ -142,8 +142,8 @@ export function SuburbRows({ rows }: SuburbRowsProps) {
               }}
               className={cn(
                 GRID,
-                "cursor-pointer rounded-lg border border-border-card bg-surface px-3.5 py-[11px]",
-                "transition-[background-color,border-color,box-shadow,transform] duration-[170ms] ease-out",
+                "cursor-pointer rounded-lg border border-border-card bg-surface px-3.5 py-2.75",
+                "transition-[background-color,border-color,box-shadow,transform] duration-170 ease-out",
                 // §4 hover: tint #F8FAFD, teal border, 1px lift, teal-tinted shadow.
                 "hover:-translate-y-px hover:border-accent-teal hover:bg-[#f8fafd] hover:shadow-[0_10px_22px_-18px_rgb(14_165_160/0.7)]",
                 "focus-visible:border-accent-teal focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40",
@@ -167,7 +167,7 @@ export function SuburbRows({ rows }: SuburbRowsProps) {
       </div>
 
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-[500px]">
+        <SheetContent side="right" className="w-full sm:max-w-125">
           {selected ? (
             <>
               <SheetHeader>
