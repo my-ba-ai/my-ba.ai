@@ -158,6 +158,18 @@ Still to verify on GitHub: AC 2's CI half (push the throwaway branch, see `secre
 8. A commit that changes no files the hooks cover (e.g. only an image) succeeds, rather than failing on an empty file list.
 9. CI is unchanged: `pnpm check` is still the gate.
 
+**Implemented (2026-09-23).** `lefthook.yml` now has P0-9's jobs next to P0-8's gitleaks. `pre-commit` is `piped`: `format` runs first, then `lint`, `tailwind` and `gitleaks` run as a parallel group. That order stops oxlint reading a file while oxfmt writes it. `pre-push` runs `pnpm typecheck`. `glob_matcher: doublestar` makes `**/*.ts` match root files too. What was checked in the pinned binaries (lefthook 2.1.14, oxfmt 0.68.0, oxlint 1.82.0) rather than assumed:
+
+- Partially staged files (AC 5): lefthook 2.1.14 stashes the unstaged hunks of partially staged files to `.git/info/lefthook-unstaged.patch` before `pre-commit` and restores them afterwards. So `stage_fixed` is safe, and `format` needs no check-only fallback.
+- Empty file lists (AC 8): lefthook skips a job whose glob matches no staged file ("no files for inspection"). As a second guard, both oxfmt and oxlint get `--no-error-on-unmatched-pattern`, so a list that is empty after their own ignore rules doesn't fail either.
+- Ignored paths (AC 6): oxfmt drops explicit paths that match its ignore rules. The `format` job's `exclude` also mirrors `.oxfmtrc.json` `ignorePatterns`, and `lint`'s mirrors `.oxlintrc.json`. Keep them in sync.
+- `pnpm hooks:run` is `lefthook run pre-commit --all-files --no-stage-fixed`, so a manual full run formats but never stages.
+- Hooks call `node_modules/.bin/oxfmt` / `oxlint` directly, not through `pnpm exec`, to avoid pnpm's startup cost on every commit.
+
+oxfmt is pinned to exact `0.68.0` (`pnpm-lock.yaml` specifier updated to match). oxlint and lefthook keep caret ranges.
+
+**Verified (2026-09-23).** On macOS, in a throwaway clone: `lefthook validate` passes and AC 1–9 all pass. That includes AC 5 (the unstaged hunk stays out of the commit and is restored in the working tree) and AC 4 (a TS2322 blocks the push, and `pnpm typecheck` shows the same error). **P0-9 complete.**
+
 **Dependencies:** none. It shares lefthook with P0-8 (see above). **Risk:** low.
 
 **Watch items:**

@@ -33,7 +33,7 @@ infra/
 
 ```bash
 brew install gitleaks   # the pre-commit hook needs it and fails without it (P0-8)
-pnpm install        # also installs the git hooks (lefthook)
+pnpm install        # also installs the git hooks (lefthook), see below
 pnpm build          # shared must build before the apps typecheck
 
 cp packages/db/.env.example packages/db/.env
@@ -59,6 +59,21 @@ curl -s localhost:3001/api/health/db
 `rlsEnforced: false` means the API is connected as a superuser and every
 tenant policy in the schema is doing nothing (D40).
 
+### Git hooks
+
+`pnpm install` installs them through lefthook (`lefthook.yml`). They surface
+CI failures early; CI stays the gate.
+
+- **pre-commit**, on staged files only: `oxfmt` formats them and re-stages the
+  result, then `oxlint` (errors block, warnings don't), the Tailwind
+  canonical-class check (only when `apps/web/src` is staged) and gitleaks run
+  in parallel. Unstaged hunks of a partially staged file are stashed for the
+  hook, so they never end up in the commit.
+- **pre-push**: `pnpm typecheck`.
+
+`pnpm hooks:run` runs the pre-commit checks over every file without staging
+anything.
+
 ## Scripts
 
 | Command                  | What it does                                                               |
@@ -76,6 +91,7 @@ tenant policy in the schema is doing nothing (D40).
 | `pnpm test:integration`  | P0-5 durability suite (CI `integration` job). Needs `db:up` + `db:migrate` |
 | `pnpm db:studio`         | Drizzle Studio against the local database                                  |
 | `pnpm secrets:scan`      | gitleaks over the full git history, as CI's `secrets` job does on `main`   |
+| `pnpm hooks:run`         | The pre-commit hook over every file. Formats, but stages nothing           |
 
 ## Conventions
 
@@ -131,5 +147,10 @@ Phase 0 — Foundation:
   CI `secrets` job on the PR's commits (the full history on `main`), with
   redacted output. The full history scans clean. Still to do on GitHub: the
   throwaway-branch `--no-verify` push, and making `secrets` a required check.
+
+- **P0-9 complete:** git hooks. `pre-commit` formats staged files with oxfmt
+  (re-staged), then lints them with oxlint and runs the Tailwind check and
+  gitleaks; `pre-push` runs `pnpm typecheck`. oxfmt is pinned to 0.68.0. All
+  acceptance checks pass on macOS, including partially staged files.
 
 Next up: finish verifying **P0-6** and **P0-8**, then Phase 1.

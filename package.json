@@ -22,11 +22,12 @@
     "test:integration": "pnpm --filter @my-ba/orchestrator run test:integration",
     "secrets:scan": "gitleaks git . --redact --no-banner --verbose",
     "clean": "turbo run clean",
+    "hooks:run": "lefthook run pre-commit --all-files --no-stage-fixed",
     "prepare": "lefthook install"
   },
   "devDependencies": {
     "lefthook": "^2.1.14",
-    "oxfmt": "^0.68.0",
+    "oxfmt": "0.68.0",
     "oxlint": "^1.0.0",
     "turbo": "^2.5.0",
     "typescript": "^5.9.0"

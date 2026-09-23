@@ -1,8 +1,70 @@
 # Git hooks, installed by `pnpm install` (root `prepare` script).
 # Agents must never bypass them: no `--no-verify`, no `LEFTHOOK=0` (AGENTS.md).
-# P0-9 adds format, lint and typecheck commands here.
+# CI is the gate (`verify` runs `pnpm check`, plus `secrets`); these hooks only
+# surface the same failures before a commit or push (P0-8, P0-9).
+#
+# Manual full run: `pnpm hooks:run` (all files, and nothing gets staged).
+
+# `**/*.ts` matches files at the repo root too; `*` never crosses a `/`.
+glob_matcher: doublestar
 
 pre-commit:
-  commands:
-    gitleaks:
-      run: ./scripts/hooks/gitleaks-staged.sh
+  # `format` runs first so `lint` never reads a file while oxfmt is writing it.
+  # The rest run in parallel. A failing job stops the hook.
+  #
+  # Partially staged files: lefthook stashes unstaged hunks
+  # (.git/info/lefthook-unstaged.patch) before this hook and restores them
+  # afterwards, so `stage_fixed` only re-stages what was already staged
+  # (P0-9 AC 5). Re-check this on any lefthook major bump.
+  piped: true
+  jobs:
+    - name: format
+      # File types oxfmt formats in this repo. Add an extension here when the
+      # repo gains one oxfmt handles (`pnpm format:check` in CI is the gate).
+      glob: "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc,md,yml,yaml,css,html}"
+      # Mirrors `.oxfmtrc.json` ignorePatterns, in case oxfmt formats explicit
+      # paths it would skip when walking the repo. Keep the two in sync.
+      exclude:
+        - "**/dist/**"
+        - "**/.next/**"
+        - "**/.turbo/**"
+        - "**/node_modules/**"
+        - "docs/prototypes/**"
+        - "packages/db/drizzle/**"
+        - "pnpm-lock.yaml"
+      run: node_modules/.bin/oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+
+    - name: checks
+      group:
+        parallel: true
+        jobs:
+          - name: lint
+            # Check only, no --fix. Errors block the commit; warnings don't (as in CI).
+            glob: "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"
+            # Mirrors `.oxlintrc.json` ignorePatterns. Keep the two in sync.
+            exclude:
+              - "**/dist/**"
+              - "**/.next/**"
+              - "**/.turbo/**"
+              - "**/node_modules/**"
+              - "**/coverage/**"
+              - "docs/prototypes/**"
+              - "apps/web/src/components/ui/**"
+            run: node_modules/.bin/oxlint --no-error-on-unmatched-pattern {staged_files}
+
+          - name: tailwind
+            # Canonical Tailwind classes (D59). Scans the whole app, which is
+            # fast; the glob only decides whether it runs.
+            glob: "apps/web/src/**/*.{ts,tsx}"
+            run: node apps/web/scripts/check-tailwind-canonical.mjs
+
+          - name: gitleaks
+            run: ./scripts/hooks/gitleaks-staged.sh
+
+pre-push:
+  jobs:
+    - name: typecheck
+      # Turbo, so unchanged packages come from cache. If this gets slow, scope
+      # it to changed packages (turbo --filter=...[origin/main]); don't drop it.
+      run: pnpm typecheck

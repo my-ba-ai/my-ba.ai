@@ -132,6 +132,14 @@ runs in two places with the same `.gitleaks.toml`:
 blocks a commit, remove the value and follow the steps above. Don't route
 around the hook.
 
+**The same rule covers every git hook (P0-9).** `pre-commit` also formats
+(oxfmt, re-staged), lints (oxlint) and runs the Tailwind check on the staged
+files; `pre-push` runs `pnpm typecheck`. Never skip them with `--no-verify`,
+`LEFTHOOK=0` or `git push --no-verify`. If a hook fails, fix the cause
+(`pnpm format`, the lint error, the type error) and commit again. Don't
+disable a rule, widen a hook's `exclude` or edit `lefthook.yml` to get a commit
+through; that is a change to propose to the user.
+
 **Allowlisting a false positive** is the user's call, never an agent's quiet
 fix. Propose it as its own PR that changes only `.gitleaks.toml` and says why
 the match is not a secret. Scope every entry to a path _and_ a regex
