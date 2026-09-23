@@ -74,7 +74,7 @@
 6. `integration` is added as a required status check on `main` alongside `verify`.
 7. Job timeout ≤ 15 min. Record the observed image pull time in the PR description.
 
-**Implemented, verification pending.** The job is in `ci.yml`; AC 2 and 5–7 need GitHub runs and a branch-protection change. The Postgres readiness wait is folded into the AC 3 role-assertion step, which runs before `db:migrate` and retries until `my_ba_app` can log in over TCP (on a fresh volume the container may report healthy before the init scripts have finished).
+**Done.** Verified on GitHub (2026-09-23): the job passed on the PR and on `main` with the app-role step logging `f|f` (AC 1–4); the throwaway `chore/p0-7-break-check` branch (expects `prepare` twice) failed the job and was deleted (AC 5); `integration` is a required check on `main` (AC 6); the image pull took ~30 s, well under the ~3 min threshold, so the dev image stays (AC 7). The Postgres readiness wait is folded into the AC 3 role-assertion step, which runs before `db:migrate` and retries until `my_ba_app` can log in over TCP (on a fresh volume the container may report healthy before the init scripts have finished).
 
 **Dependencies:** P0-5 (suite, migration 0009 committed). **Risk:** low. Watch items: the `timescaledb-ha` image is large (multi-GB), so the pull may dominate job time; if it's over ~3 min, consider the slimmer `timescale/timescaledb` image plus the pgvector extension, recorded as a D-code because it diverges from local dev. The SIGKILL/child-process tests can be timing-sensitive on shared runners, so fix any flake at its cause rather than adding retries.
 
@@ -106,7 +106,7 @@
 3. The same test with an AWS-shaped key (`AKIA…`) and a PEM private-key header is also caught (this proves the default rules are active).
 4. `pk_test_replace_me` in an `.env.example` and `postgres:postgres@localhost` in `docker-compose.yml` are **not** flagged.
 5. CI logs show findings redacted. No matched value appears in plain text.
-6. `secrets` is a required status check on `main`, next to `verify` (and `integration` once P0-7 lands).
+6. `secrets` is a required status check on `main`, next to `verify` and `integration`.
 7. The hook adds < 1 s to a typical commit (it scans staged changes, not the repo).
 8. A fresh clone plus `pnpm install` installs the hook with no extra step, apart from installing the gitleaks binary.
 

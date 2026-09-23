@@ -117,12 +117,11 @@ Phase 0 — Foundation:
   Still to run: `pnpm check`, `pnpm build` and the browser walk-through in the
   roadmap's P0-6 acceptance criteria.
 
-- **P0-7 implemented, verification pending:** CI `integration` job. Starts
-  the docker-compose Postgres (same `timescaledb-ha:pg17` image as dev), migrates
-  an empty database, asserts the app role is neither superuser nor BYPASSRLS, then
-  runs `pnpm test:integration`. Still to do on GitHub: first green run on `main`,
-  the deliberate-break run, making `integration` a required check, and recording
-  the image pull time.
+- **P0-7 complete:** CI `integration` job. Starts the docker-compose Postgres
+  (same `timescaledb-ha:pg17` image as dev, ~30 s pull), migrates an empty
+  database, asserts the app role is neither superuser nor BYPASSRLS, then runs
+  `pnpm test:integration`. Green on `main`, proven to fail on a deliberately
+  broken suite, and a required check on `main` alongside `verify`.
 
-Next up: finish verifying **P0-6** and **P0-7**, then Phase 1. Open follow-up:
+Next up: finish verifying **P0-6**, then Phase 1. Open follow-up:
 **P0-8** (gitleaks secret scanning in CI + pre-commit).
