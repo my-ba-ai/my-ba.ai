@@ -119,6 +119,31 @@ git diff | grep -nE '(pk|sk|rk)_(test|live)_|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0
 
 Anything it prints is either removed or explicitly approved by the user.
 
+**This is enforced mechanically (P0-8, D60).** [gitleaks](https://github.com/gitleaks/gitleaks)
+runs in two places with the same `.gitleaks.toml`:
+
+- A lefthook `pre-commit` hook scans the staged changes. It is installed by
+  `pnpm install` and fails if the `gitleaks` binary is missing
+  (`brew install gitleaks`).
+- The `secrets` CI job scans the PR's commits (the full history on `main`) and
+  is a required check. CI is the gate; the hook only catches it sooner.
+
+`git commit --no-verify` and `LEFTHOOK=0` are not agent options. If the hook
+blocks a commit, remove the value and follow the steps above. Don't route
+around the hook.
+
+**Allowlisting a false positive** is the user's call, never an agent's quiet
+fix. Propose it as its own PR that changes only `.gitleaks.toml` and says why
+the match is not a secret. Scope every entry to a path _and_ a regex
+(`condition = "AND"`). Never allowlist a whole file, a directory or a rule, and
+never use inline `gitleaks:allow` comments. A real secret is never allowlisted:
+it is rotated at the provider first.
+
+New providers get a custom rule in `.gitleaks.toml` in the ticket that brings
+them in, and only after the key format has been checked in the provider's
+dashboard or docs. Today only Clerk's publishable key has one; Clerk secret
+keys are already caught by the upstream `stripe-access-token` rule.
+
 ## Commands
 
 ```bash
@@ -176,8 +201,9 @@ P0-1 (scaffold), P0-2 (database), P0-3 (auth), P0-4 (Redis + BullMQ) and P0-5
 (LangGraph.js durable-interrupt spike) are done; the P0-5 gate passed, so D22 is
 LOCKED and Phase 1 is unblocked. P0-6 (Next.js shell) is implemented and
 awaiting verification. P0-7 is done: the CI `integration` job runs the P0-5
-durability suite and is a required check on `main`. After that comes Phase 1. P0-8 (secret scanning) is an open
-follow-up.
+durability suite and is a required check on `main`. P0-8 (gitleaks secret
+scanning in CI + pre-commit) is implemented and awaiting verification on
+GitHub. After that comes Phase 1.
 
 Every web route is behind a session unless it is added to the public matcher in
 `apps/web/src/proxy.ts` (D58). API reads rely on RLS alone, with no explicit

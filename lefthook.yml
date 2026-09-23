@@ -1,0 +1,8 @@
+# Git hooks, installed by `pnpm install` (root `prepare` script).
+# Agents must never bypass them: no `--no-verify`, no `LEFTHOOK=0` (AGENTS.md).
+# P0-9 adds format, lint and typecheck commands here.
+
+pre-commit:
+  commands:
+    gitleaks:
+      run: ./scripts/hooks/gitleaks-staged.sh

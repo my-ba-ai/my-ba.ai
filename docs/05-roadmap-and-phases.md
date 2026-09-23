@@ -110,6 +110,17 @@
 7. The hook adds < 1 s to a typical commit (it scans staged changes, not the repo).
 8. A fresh clone plus `pnpm install` installs the hook with no extra step, apart from installing the gitleaks binary.
 
+**Implemented, verification pending (2026-09-23).** gitleaks is pinned to 8.30.1 (checksum from the release's `checksums.txt`). The upstream rules already cover AWS, PEM private keys, SendGrid, Cloudflare API keys and Stripe-shaped `sk_(test|live)_` secrets, which also catches Clerk secret keys. So `.gitleaks.toml` adds just one custom rule, `clerk-publishable-key`. HtAG, Domain, Apify, Resend and R2 each get a rule in the ticket that brings that provider in, once its key format has been checked (Brian's call). The Postgres-credentials allowlist also names `.github/workflows/ci.yml`, which holds the same local URLs since P0-7. Both allowlists are path AND regex; no current rule matches either. Hook: `scripts/hooks/gitleaks-staged.sh` via `lefthook.yml` (`gitleaks git --staged`, the v8.30 subcommand). Verified locally against a clone of `main` with the committed config:
+
+- AC 1: full history (25 commits) exits 0, no findings.
+- AC 2: the hook blocks a staged `pk_test_` + base64(`example.clerk.accounts.dev$`) (`clerk-publishable-key`), and a `--log-opts base..head` scan of the same commit, made with `--no-verify`, exits 1.
+- AC 3: the hook also blocks an `AKIA…` key (`aws-access-token`), an `openssl genrsa` PEM (`private-key`) and a Clerk-shaped `sk_test_…` (`stripe-access-token`).
+- AC 4: `pk_test_replace_me`, `sk_test_replace_me` and `postgres:postgres@localhost` staged in an `.env.example` are not flagged.
+- AC 5: the log shows `Secret: REDACTED`, and neither the log nor the SARIF report contains the value.
+- AC 7: about 0.5 s per commit on a 2-vCPU Linux box, most of it gitleaks' ~0.35 s startup. So the hook has no version preflight: it detects an old binary from its `unknown flag` error instead.
+
+Still to verify on GitHub: AC 2's CI half (push the throwaway branch, see `secrets` fail), AC 5 in the Actions log, AC 6 (required check) and AC 8 (fresh clone). The one-off full-history scan is clean, so nothing needs rotating.
+
 **Dependencies:** none (can land before P0-7; if both touch `ci.yml`, whichever lands second rebases). **Risk:** low.
 
 **Watch items:**

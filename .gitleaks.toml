@@ -1,0 +1,52 @@
+# gitleaks config (P0-8). Enforces AGENTS.md → "Secrets and credentials".
+# Runs in the `secrets` CI job (the gate) and the lefthook pre-commit hook.
+#
+# Adding an allowlist entry: open a PR that changes only this file and says why
+# the match is not a secret. Scope every entry to a path AND a regex
+# (condition = "AND"). Never allowlist a whole file, a directory or a rule.
+
+title = "my-ba.ai"
+
+[extend]
+# The upstream ruleset for the pinned gitleaks version (see ci.yml). It already
+# covers AWS, PEM private keys, GitHub, SendGrid, Cloudflare API keys and
+# Stripe-shaped `sk_/rk_(test|live)_` secrets. That last one also matches Clerk
+# secret keys, so there is no separate Clerk secret-key rule here.
+useDefault = true
+
+# Clerk publishable key: `pk_(test|live)_` + base64("<frontend-api-host>$").
+# No upstream rule covers it. It is public by design, but AGENTS.md bans it as a
+# literal all the same.
+[[rules]]
+id = "clerk-publishable-key"
+description = "Clerk publishable key"
+regex = '''\b(pk_(?:test|live)_[A-Za-z0-9+/]{16,}={0,2})(?:[\x60'"\s;]|\\[nr]|$)'''
+entropy = 3
+keywords = ["pk_test_", "pk_live_"]
+
+# Other providers get a rule in the ticket that brings them in, once the real
+# key format has been checked in that provider's dashboard or docs (never
+# guessed): HtAG (Phase 1), Domain, Apify, Resend, Cloudflare R2.
+
+# `*_replace_me` placeholders in .env.example files. No current rule matches
+# them; this stops a future rule from tripping on the documented placeholder.
+[[allowlists]]
+description = "Non-functional .env.example placeholders"
+condition = "AND"
+paths = ['''(?:^|/)\.env\.example$''']
+regexTarget = "match"
+regexes = ['''[a-z]{2}_(?:test|live)_replace_me''']
+
+# Local docker-compose credentials: the only literals AGENTS.md allows. They
+# unlock nothing outside a developer's own Postgres.
+[[allowlists]]
+description = "Local docker-compose Postgres credentials"
+condition = "AND"
+paths = [
+  '''(?:^|/)\.env\.example$''',
+  '''^docker-compose\.yml$''',
+  '''^infra/postgres/init/''',
+  '''^\.github/workflows/ci\.yml$''',
+]
+regexTarget = "line"
+regexes = ['''(?:postgres:postgres|my_ba_app:app)@localhost''']

@@ -32,7 +32,8 @@ infra/
 ## Getting started
 
 ```bash
-pnpm install
+brew install gitleaks   # the pre-commit hook needs it and fails without it (P0-8)
+pnpm install        # also installs the git hooks (lefthook)
 pnpm build          # shared must build before the apps typecheck
 
 cp packages/db/.env.example packages/db/.env
@@ -74,6 +75,7 @@ tenant policy in the schema is doing nothing (D40).
 | `pnpm db:migrate`        | Drizzle migrations + `PostgresSaver.setup()` (D39, D51)                    |
 | `pnpm test:integration`  | P0-5 durability suite (CI `integration` job). Needs `db:up` + `db:migrate` |
 | `pnpm db:studio`         | Drizzle Studio against the local database                                  |
+| `pnpm secrets:scan`      | gitleaks over the full git history, as CI's `secrets` job does on `main`   |
 
 ## Conventions
 
@@ -123,5 +125,11 @@ Phase 0 — Foundation:
   `pnpm test:integration`. Green on `main`, proven to fail on a deliberately
   broken suite, and a required check on `main` alongside `verify`.
 
-Next up: finish verifying **P0-6**, then Phase 1. Open follow-up:
-**P0-8** (gitleaks secret scanning in CI + pre-commit).
+- **P0-8 implemented, verification pending:** secret scanning with gitleaks
+  8.30.1 and `.gitleaks.toml` (upstream rules plus a Clerk publishable-key
+  rule). It runs as a lefthook `pre-commit` hook on staged changes and as the
+  CI `secrets` job on the PR's commits (the full history on `main`), with
+  redacted output. The full history scans clean. Still to do on GitHub: the
+  throwaway-branch `--no-verify` push, and making `secrets` a required check.
+
+Next up: finish verifying **P0-6** and **P0-8**, then Phase 1.
