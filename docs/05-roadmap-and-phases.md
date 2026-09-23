@@ -74,6 +74,8 @@
 6. `integration` is added as a required status check on `main` alongside `verify`.
 7. Job timeout ≤ 15 min. Record the observed image pull time in the PR description.
 
+**Implemented, verification pending.** The job is in `ci.yml`; AC 2 and 5–7 need GitHub runs and a branch-protection change. The Postgres readiness wait is folded into the AC 3 role-assertion step, which runs before `db:migrate` and retries until `my_ba_app` can log in over TCP (on a fresh volume the container may report healthy before the init scripts have finished).
+
 **Dependencies:** P0-5 (suite, migration 0009 committed). **Risk:** low. Watch items: the `timescaledb-ha` image is large (multi-GB), so the pull may dominate job time; if it's over ~3 min, consider the slimmer `timescale/timescaledb` image plus the pgvector extension, recorded as a D-code because it diverges from local dev. The SIGKILL/child-process tests can be timing-sensitive on shared runners, so fix any flake at its cause rather than adding retries.
 
 ---

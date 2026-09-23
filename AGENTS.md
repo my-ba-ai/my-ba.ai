@@ -175,8 +175,9 @@ Phase order and ticket acceptance criteria are in `docs/05-roadmap-and-phases.md
 P0-1 (scaffold), P0-2 (database), P0-3 (auth), P0-4 (Redis + BullMQ) and P0-5
 (LangGraph.js durable-interrupt spike) are done; the P0-5 gate passed, so D22 is
 LOCKED and Phase 1 is unblocked. P0-6 (Next.js shell) is implemented and
-awaiting verification. After that comes Phase 1. P0-7 (CI integration job)
-and P0-8 (secret scanning) are open follow-ups.
+awaiting verification, as is P0-7 (the CI `integration` job that runs the P0-5
+durability suite). After that comes Phase 1. P0-8 (secret scanning) is an open
+follow-up.
 
 Every web route is behind a session unless it is added to the public matcher in
 `apps/web/src/proxy.ts` (D58). API reads rely on RLS alone, with no explicit
@@ -189,4 +190,6 @@ LangGraph checkpoints live in the `langgraph` schema, outside RLS (D51). Tenant 
 is in the thread id — always build it with `threadIdFor`. A node that calls
 `interrupt()` re-executes from the top on resume: keep side effects out of it or
 before it in a separate node. `pnpm test:integration` is the P0-5 durability suite
-and needs `pnpm db:up && pnpm db:migrate`.
+and needs `pnpm db:up && pnpm db:migrate`. CI runs it in the `integration` job, as
+`my_ba_app` against a freshly migrated database — don't make it pass by
+connecting as `postgres` or by adding retries to a flaky SIGKILL case.
