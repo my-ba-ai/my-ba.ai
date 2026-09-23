@@ -3,8 +3,8 @@ import { defineConfig } from "vitest/config"
 /**
  * `*.integration.spec.ts` needs the docker Postgres (`pnpm db:up && pnpm
  * db:migrate`) and spawns child processes, so it only runs under
- * `pnpm --filter @my-ba/orchestrator test:integration`. CI has no Postgres
- * service yet; the plain `test` task stays hermetic.
+ * `pnpm --filter @my-ba/orchestrator test:integration`, which CI runs in its
+ * own `integration` job (P0-7). The plain `test` task stays hermetic.
  */
 const integration = process.env.INTEGRATION === "1"
 

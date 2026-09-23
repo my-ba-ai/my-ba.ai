@@ -60,20 +60,20 @@ tenant policy in the schema is doing nothing (D40).
 
 ## Scripts
 
-| Command                  | What it does                                               |
-| ------------------------ | ---------------------------------------------------------- |
-| `pnpm dev`               | All three apps in watch mode                               |
-| `pnpm build`             | Turbo build, respecting the dependency graph               |
-| `pnpm typecheck`         | `tsc --noEmit` across every workspace                      |
-| `pnpm lint`              | Oxlint                                                     |
-| `pnpm format`            | oxfmt (write); `pnpm format:check` in CI                   |
-| `pnpm test`              | Vitest across every workspace                              |
-| `pnpm check`             | typecheck + lint + format:check + test — what CI runs      |
-| `pnpm db:up` / `db:down` | Local Postgres + Redis via docker compose                  |
-| `pnpm db:generate`       | Schema change → migration. Never hand-write `CREATE TABLE` |
-| `pnpm db:migrate`        | Drizzle migrations + `PostgresSaver.setup()` (D39, D51)    |
-| `pnpm test:integration`  | P0-5 durability suite. Needs `db:up` + `db:migrate`        |
-| `pnpm db:studio`         | Drizzle Studio against the local database                  |
+| Command                  | What it does                                                               |
+| ------------------------ | -------------------------------------------------------------------------- |
+| `pnpm dev`               | All three apps in watch mode                                               |
+| `pnpm build`             | Turbo build, respecting the dependency graph                               |
+| `pnpm typecheck`         | `tsc --noEmit` across every workspace                                      |
+| `pnpm lint`              | Oxlint                                                                     |
+| `pnpm format`            | oxfmt (write); `pnpm format:check` in CI                                   |
+| `pnpm test`              | Vitest across every workspace                                              |
+| `pnpm check`             | typecheck + lint + format:check + test — CI `verify` job                   |
+| `pnpm db:up` / `db:down` | Local Postgres + Redis via docker compose                                  |
+| `pnpm db:generate`       | Schema change → migration. Never hand-write `CREATE TABLE`                 |
+| `pnpm db:migrate`        | Drizzle migrations + `PostgresSaver.setup()` (D39, D51)                    |
+| `pnpm test:integration`  | P0-5 durability suite (CI `integration` job). Needs `db:up` + `db:migrate` |
+| `pnpm db:studio`         | Drizzle Studio against the local database                                  |
 
 ## Conventions
 
@@ -117,5 +117,12 @@ Phase 0 — Foundation:
   Still to run: `pnpm check`, `pnpm build` and the browser walk-through in the
   roadmap's P0-6 acceptance criteria.
 
-Next up: finish verifying **P0-6**, then Phase 1. Open follow-ups: **P0-7** (run
-the P0-5 suite in CI) and **P0-8** (gitleaks secret scanning in CI + pre-commit).
+- **P0-7 implemented, verification pending:** CI `integration` job. Starts
+  the docker-compose Postgres (same `timescaledb-ha:pg17` image as dev), migrates
+  an empty database, asserts the app role is neither superuser nor BYPASSRLS, then
+  runs `pnpm test:integration`. Still to do on GitHub: first green run on `main`,
+  the deliberate-break run, making `integration` a required check, and recording
+  the image pull time.
+
+Next up: finish verifying **P0-6** and **P0-7**, then Phase 1. Open follow-up:
+**P0-8** (gitleaks secret scanning in CI + pre-commit).

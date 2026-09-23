@@ -59,3 +59,82 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+  # P0-7: the P0-5 durability suite (pause → SIGKILL → resume from checkpoint)
+  # against a real Postgres, so a @langchain/* bump, a PostgresSaver schema change
+  # or a lost grant on langgraph.* can't merge unnoticed.
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Local docker-compose credentials only (the allowed literals in AGENTS.md).
+      # The suite runs as my_ba_app so RLS and grants apply exactly as in dev.
+      DATABASE_URL: postgresql://my_ba_app:app@localhost:5432/my_ba
+      DATABASE_MIGRATION_URL: postgresql://postgres:postgres@localhost:5432/my_ba
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The suite imports @my-ba/db from dist; `...` builds its dependencies too.
+      - name: Build orchestrator and dependencies
+        run: pnpm turbo run build --filter=@my-ba/orchestrator...
+
+      # Own step so its duration shows up on its own in the run summary. The
+      # timescaledb-ha image is multi-GB; see the P0-7 watch item before swapping it.
+      - name: Pull Postgres image
+        run: docker compose pull postgres
+
+      # docker compose, not a `services:` container: the my_ba_app role comes from
+      # infra/postgres/init via docker-entrypoint-initdb.d, which needs the checkout
+      # mounted. Redis isn't needed, so only postgres is started.
+      - name: Start Postgres
+        run: pnpm db:up postgres
+
+      # Does two things. (1) Readiness: on a fresh volume the init scripts may run
+      # on a temporary server before the real one listens on TCP, so a
+      # healthy container doesn't yet prove my_ba_app can log in over TCP. Retry
+      # until it can. (2) A superuser or BYPASSRLS role would let the suite pass
+      # regardless of grants and policies, so fail loudly if the app role is one.
+      - name: Wait for app role and assert it is not privileged
+        run: |
+          for i in $(seq 1 30); do
+            if flags=$(docker compose exec -T postgres psql "$DATABASE_URL" -tAc \
+              "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user" 2>/dev/null); then
+              break
+            fi
+            sleep 2
+          done
+          echo "rolsuper|rolbypassrls = ${flags:-<no connection>}"
+          if [ "${flags:-}" != "f|f" ]; then
+            echo "::error::DATABASE_URL must connect as a NOSUPERUSER NOBYPASSRLS role (got '${flags:-no connection}')."
+            exit 1
+          fi
+
+      # Drizzle journal from an empty database (through 0009_langgraph_schema),
+      # then checkpointer:setup. Also the only proof migrations work from scratch.
+      - name: Migrate
+        run: pnpm db:migrate
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Collect Postgres logs
+        if: failure()
+        run: docker compose logs postgres > postgres.log 2>&1 || true
+
+      - name: Upload Postgres logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-logs
+          path: postgres.log
+          if-no-files-found: ignore
