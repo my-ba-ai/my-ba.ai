@@ -18,6 +18,7 @@ const sqlName = (column: Column): string =>
 describe("schema", () => {
   it("exports every table", () => {
     expect(tables.map(getTableName).toSorted()).toEqual([
+      "htag_calls",
       "purchase_tasks",
       "suburb_metrics_ts",
       "suburbs",
@@ -68,7 +69,30 @@ describe("schema", () => {
 
     // Timescale rejects any unique index that omits the partitioning column,
     // so this is a real constraint on the schema, not a style preference.
-    expect(pk?.columns.map(sqlName)).toContain("observed_at")
-    expect(columns.find((column) => sqlName(column) === "observed_at")?.notNull).toBe(true)
+    expect(pk?.columns.map(sqlName)).toContain("measured_at")
+    expect(columns.find((column) => sqlName(column) === "measured_at")?.notNull).toBe(true)
+  })
+
+  /**
+   * D40: one row per HtAG billable row (area × property_type × period) per
+   * metric. The primary key is the upsert target, so a missing column here
+   * means house and unit readings silently overwrite each other.
+   */
+  it("keys suburb_metrics_ts exactly as D40 does", () => {
+    const { primaryKeys } = getTableConfig(schema.suburbMetricsTs)
+    expect(primaryKeys[0]?.columns.map(sqlName)).toEqual([
+      "suburb_id",
+      "property_type",
+      "bedrooms",
+      "metric_name",
+      "measured_at",
+    ])
+  })
+
+  it("constrains HtAG vocabularies to the values @my-ba/shared owns", () => {
+    const metricChecks = getTableConfig(schema.suburbMetricsTs).checks.map((c) => c.name)
+    const callChecks = getTableConfig(schema.htagCalls).checks.map((c) => c.name)
+    expect(metricChecks).toContain("suburb_metrics_ts_property_type_check")
+    expect(callChecks).toContain("htag_calls_tier_check")
   })
 })

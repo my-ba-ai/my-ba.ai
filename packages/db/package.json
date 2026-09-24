@@ -23,6 +23,7 @@
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:integration": "INTEGRATION=1 vitest run",
     "test:watch": "vitest",
     "generate": "drizzle-kit generate",
     "bootstrap": "bash scripts/bootstrap-migrations.sh",

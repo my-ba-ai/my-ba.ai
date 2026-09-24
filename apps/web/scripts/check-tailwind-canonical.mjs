@@ -43,7 +43,7 @@ const fix = process.argv.includes("--fix")
 
 // Vendored shadcn source is regenerated, never hand-edited (D54) — same
 // exclusion as oxlint.
-const EXCLUDED_DIRS = [join(srcRoot, "components", "ui")]
+const EXCLUDED_DIRS = new Set([join(srcRoot, "components", "ui")])
 
 if (typeof loadDesignSystem !== "function") {
   console.error("tailwindcss no longer exports __unstable__loadDesignSystem — update this script.")
@@ -95,7 +95,7 @@ const designSystem = await loadDesignSystem(readFileSync(cssPath, "utf8"), {
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name)
-    if (EXCLUDED_DIRS.includes(path)) continue
+    if (EXCLUDED_DIRS.has(path)) continue
     if (statSync(path).isDirectory()) walk(path, out)
     else if (/\.(tsx?|jsx?)$/.test(name) && !/\.test\.[jt]sx?$/.test(name)) out.push(path)
   }

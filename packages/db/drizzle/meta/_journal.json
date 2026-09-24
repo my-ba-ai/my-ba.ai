@@ -71,6 +71,27 @@
       "when": 1789620992710,
       "tag": "0009_langgraph_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790211770237,
+      "tag": "0010_metrics_compression_off",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790211797541,
+      "tag": "0011_htag_data_shape",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790211807848,
+      "tag": "0012_metrics_compression_on_htag_calls_rls",
+      "breakpoints": true
     }
   ]
 }
