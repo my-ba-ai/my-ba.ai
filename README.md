@@ -125,15 +125,15 @@ Phase 0 — Foundation:
   The Base UI Combobox/Slider spike passed all 8 keyboard checks, so D52 is
   LOCKED. Re-run that checklist after any `@base-ui/react` upgrade.
 
-- **P0-6 implemented, verification pending:** Next.js shell. Deny-by-default
+- **P0-6 complete:** Next.js shell. Deny-by-default
   route protection in `proxy.ts` (only `/sign-in` is public), sidebar/header
   layout with unbuilt sections disabled and labelled by phase, `/tasks` backed
   by a real tenant-scoped `GET /api/purchase-tasks` (empty, loading and error
   states, plus a fixture-tested task card), a placeholder `/tasks/[taskId]` that
   404s for missing and other-tenant ids, and a split-layout sign-in. The P0-3
   identity check moved to [`/dev/whoami`](http://localhost:3000/dev/whoami).
-  Still to run: `pnpm check`, `pnpm build` and the browser walk-through in the
-  roadmap's P0-6 acceptance criteria.
+  `pnpm check`, `pnpm build` and the browser walk-through in the roadmap's
+  P0-6 acceptance criteria all pass (2026-09-24).
 
 - **P0-7 complete:** CI `integration` job. Starts the docker-compose Postgres
   (same `timescaledb-ha:pg17` image as dev, ~30 s pull), migrates an empty
@@ -141,12 +141,12 @@ Phase 0 — Foundation:
   `pnpm test:integration`. Green on `main`, proven to fail on a deliberately
   broken suite, and a required check on `main` alongside `verify`.
 
-- **P0-8 implemented, verification pending:** secret scanning with gitleaks
+- **P0-8 complete:** secret scanning with gitleaks
   8.30.1 and `.gitleaks.toml` (upstream rules plus a Clerk publishable-key
   rule). It runs as a lefthook `pre-commit` hook on staged changes and as the
   CI `secrets` job on the PR's commits (the full history on `main`), with
-  redacted output. The full history scans clean. Still to do on GitHub: the
-  throwaway-branch `--no-verify` push, and making `secrets` a required check.
+  redacted output. The full history scans clean, a `--no-verify` push of a
+  planted key fails `secrets` in CI, and `secrets` is a required check on `main`.
 
 - **P0-9 complete:** git hooks. `pre-commit` formats staged files with oxfmt
   (re-staged), then lints them with oxlint and runs the Tailwind check and
@@ -155,14 +155,14 @@ Phase 0 — Foundation:
 
 Phase 1 — HtAG Integration + Suburb Screener:
 
-- **P1-0 implemented, verification pending:** schema delta for the HtAG data
+- **P1-0 complete:** schema delta for the HtAG data
   shape. `suburb_metrics_ts` is rekeyed per D40 —
   `(suburb_id, property_type, bedrooms, metric_name, measured_at)`, with
   `observed_at` renamed to `measured_at` (HtAG `period_end`) and `confidence`
   added. `suburbs.htag_id` is renamed to `htag_area_id` (HtAG `loc_pid`), and
   `abs_sal_code` is added. The new `htag_calls` spend ledger is tenant-scoped
   with RLS. Migrations 0010–0012 wrap the generated one in a compression
-  off/on pair (D60). Still to run: `pnpm db:migrate` on the existing dev DB,
-  `pnpm test:integration`, and `pnpm check`.
+  off/on pair (D60). Migrated cleanly on the existing dev DB;
+  `pnpm test:integration` and `pnpm check` pass (2026-09-24).
 
-Next up: finish verifying **P0-6**, **P0-8** and **P1-0**, then P1-8 and P1-1.
+Next up: **P1-1** (HtAG REST client) and **P1-8** (ranking module).
