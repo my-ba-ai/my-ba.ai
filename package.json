@@ -19,7 +19,7 @@
     "db:generate": "pnpm --filter @my-ba/db run generate",
     "db:migrate": "pnpm --filter @my-ba/db run migrate && pnpm --filter @my-ba/orchestrator run checkpointer:setup",
     "db:studio": "pnpm --filter @my-ba/db run studio",
-    "test:integration": "pnpm --filter @my-ba/orchestrator run test:integration",
+    "test:integration": "pnpm --workspace-concurrency=1 --filter @my-ba/db --filter @my-ba/orchestrator run test:integration",
     "secrets:scan": "gitleaks git . --redact --no-banner --verbose",
     "clean": "turbo run clean",
     "hooks:run": "lefthook run pre-commit --all-files --no-stage-fixed",

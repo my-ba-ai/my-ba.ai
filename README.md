@@ -153,4 +153,16 @@ Phase 0 — Foundation:
   gitleaks; `pre-push` runs `pnpm typecheck`. oxfmt is pinned to 0.68.0. All
   acceptance checks pass on macOS, including partially staged files.
 
-Next up: finish verifying **P0-6** and **P0-8**, then Phase 1.
+Phase 1 — HtAG Integration + Suburb Screener:
+
+- **P1-0 implemented, verification pending:** schema delta for the HtAG data
+  shape. `suburb_metrics_ts` is rekeyed per D40 —
+  `(suburb_id, property_type, bedrooms, metric_name, measured_at)`, with
+  `observed_at` renamed to `measured_at` (HtAG `period_end`) and `confidence`
+  added. `suburbs.htag_id` is renamed to `htag_area_id` (HtAG `loc_pid`), and
+  `abs_sal_code` is added. The new `htag_calls` spend ledger is tenant-scoped
+  with RLS. Migrations 0010–0012 wrap the generated one in a compression
+  off/on pair (D60). Still to run: `pnpm db:migrate` on the existing dev DB,
+  `pnpm test:integration`, and `pnpm check`.
+
+Next up: finish verifying **P0-6**, **P0-8** and **P1-0**, then P1-8 and P1-1.

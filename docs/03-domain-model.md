@@ -43,60 +43,68 @@ Cloning is also the ergonomic path for the common real case: the same investor w
 
 ## Entities
 
-```
+```md
 Suburbs (canonical)
-  id, h3_index, name, state, postcode, htag_id, domain_id
+id, h3_index, name, state, postcode, htag_area_id, abs_sal_code, domain_id
+-- htag_area_id = HtAG loc_pid (e.g. QLD2659); abs_sal_code for the ABS join
 
-SuburbMetricsTS                      -- TimescaleDB hypertable
-  suburb_id, metric_name, timestamp, value
+SuburbMetricsTS -- TimescaleDB hypertable, D40 hydration cache
+suburb_id, property_type, bedrooms, metric_name, measured_at, value,
+confidence, source
+-- PK (suburb_id, property_type, bedrooms, metric_name, measured_at)
+-- measured_at = HtAG period_end; bedrooms = 'All' for MVP
+
+HtagCalls -- HtAG spend ledger (D16), one row per request
+id, tenant_id, task_id, analysis_step_id, endpoint, request_json,
+rows_returned, tier, cost_aud, status_code, created_at
 
 Users
-  id, email, tenant_id, role                -- role: investor | agent | admin
+id, email, tenant_id, role -- role: investor | agent | admin
 
 AutonomyConfig
-  user_id, agent_type, autonomy_level       -- auto | hitl
+user_id, agent_type, autonomy_level -- auto | hitl
 
-PurchaseTasks                        -- AGGREGATE ROOT
-  id, user_id, tenant_id, name, status, criteria_json,
-  locked_at, locked_snapshot_id, cloned_from_task_id, created_at
+PurchaseTasks -- AGGREGATE ROOT
+id, user_id, tenant_id, name, status, criteria_json,
+locked_at, locked_snapshot_id, cloned_from_task_id, created_at
 
 TaskArtifacts
-  id, task_id, stage, artifact_type, payload_json, created_at
-  -- immutable once task.locked_at is set
+id, task_id, stage, artifact_type, payload_json, created_at
+-- immutable once task.locked_at is set
 
 ScreeningResults
-  id, task_id, suburb_id, score, score_breakdown_json, passed, excluded_by_user
+id, task_id, suburb_id, score, score_breakdown_json, passed, excluded_by_user
 
-AnalysisSteps                        -- run log + approval gates
-  id, task_id, agent_type, stage, input_json, output_json, reasoning,
-  tool_calls_json, token_usage, cost, status,
-  requires_approval, approved_by, approved_at, rejection_reason
+AnalysisSteps -- run log + approval gates
+id, task_id, agent_type, stage, input_json, output_json, reasoning,
+tool_calls_json, token_usage, cost, status,
+requires_approval, approved_by, approved_at, rejection_reason
 
 Agencies
-  id, name, state, suburb, domain_agency_id
+id, name, state, suburb, domain_agency_id
 
 ScrapedAgents
-  id, name, agency_id, suburb, rating, review_count, sold_count,
-  median_sale_price, specialties, phone, email, source, scraped_at
+id, name, agency_id, suburb, rating, review_count, sold_count,
+median_sale_price, specialties, phone, email, source, scraped_at
 
-AgentProfiles                        -- registered agent users
-  id, user_id, scraped_agent_id (nullable), agency_id,
-  license_number, license_state, verification_status,
-  display_name, bio, photo_url
+AgentProfiles -- registered agent users
+id, user_id, scraped_agent_id (nullable), agency_id,
+license_number, license_state, verification_status,
+display_name, bio, photo_url
 
 TaskAgentContacts
-  id, task_id, agent_profile_id, status, contacted_at, last_response_at
+id, task_id, agent_profile_id, status, contacted_at, last_response_at
 
 OutreachEmails
-  id, task_agent_contact_id, subject, body, sent_at,
-  unsubscribe_token, delivery_status
+id, task_agent_contact_id, subject, body, sent_at,
+unsubscribe_token, delivery_status
 ```
 
 ## Ranking function
 
 Agent ranking is a pure, testable module — no LLM involved:
 
-```
+```javascript
 score = 0.4 × normalised(rating)
       + 0.3 × normalised(log(review_count))
       + 0.3 × normalised(recent_sold_count)

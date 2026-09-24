@@ -201,6 +201,19 @@ Governing decisions: D16–D19, D37–D44.
 
 **Dependencies:** P0-2. **Risk:** low.
 
+**Implemented (2026-09-24).** Decisions made at build time, each a delta from the description above:
+
+- **Time column:** P0-2 called it `observed_at`, not `timestamp`. It's renamed to `measured_at` anyway, to match D40.
+- **`htag_area_id`:** `suburbs.htag_id` is renamed rather than a second column added. The unique index stays per tenant, `(tenant_id, htag_area_id)`, to fit the system-tenant model (D38), not a bare global `unique`. `abs_sal_code` gets a plain index for the P1-10 join.
+- **Primary key, not an extra unique index:** the D40 key replaces the old `(suburb_id, metric_name, observed_at)` PK. Keeping the old PK would have made house and unit rows for the same period collide.
+- **Compression bracketing (D60):** Timescale won't change a PK or partitioning column while compression is on. So `0010` (custom) removes the policy, truncates the cache and disables compression, `0011` is the drizzle-generated delta, and `0012` (custom) re-enables compression with `segmentby` extended to `property_type, bedrooms`. `0012` also adds `htag_calls` RLS. SQL is kept in `packages/db/sql/`.
+- **`source`** keeps P0-2's uppercase `'HTAG'` default, not the ticket's `'htag'`.
+- **`htag_calls`:** `analysis_step_id` has no FK, because `analysis_steps` doesn't exist yet; the migration that creates it adds the FK. `task_id` is `ON DELETE SET NULL`, since spend records outlive tasks. `status_code` is nullable, with null meaning no HTTP response. `tier` is a CHECK over `HTAG_TIERS`, and `property_type` a CHECK over `HTAG_PROPERTY_TYPES`. Both vocabularies are owned by `@my-ba/shared` (`domain/htag.ts`) so P1-1 can reuse them.
+- **`ScreeningResults` bullet deferred:** the table doesn't exist yet, so the `Ranked` shape is documented by whichever ticket creates it (P1-4).
+- **Tests:** `schema.spec.ts` asserts the D40 key and the CHECKs. `htag-data-shape.integration.spec.ts` covers AC 2–4 against the docker DB as `my_ba_app`: the hypertable dimension, the PK order, compression segmentby, the double upsert leaving one row, house and unit as separate rows, and `htag_calls` isolation. Root `pnpm test:integration` now runs the db suite and the orchestrator suite in sequence.
+
+**Ripple for P1-1:** RLS scopes `htag_calls` per tenant, but HtAG's restricted-tier cap is per _account_ (10k rows/month/endpoint, Q13). A cross-tenant monthly usage query can't run as `my_ba_app`. For MVP (one tenant) that doesn't matter; before multi-tenant it needs a system-level rollup (Q18).
+
 ### P1-1 — HtAG REST client
 
 **Description:** `packages/htag-client`. fetch + Zod. `x-api-key` from env, server-side only (cl. 36). Methods: `queryMarkets(body)`, `trends(metric, { areaIds[], propertyTypes[], periodEndMin?, periodEndMax?, limit, offset })`, `summary(...)`. Comma-joins `area_id`; auto-paginates until page length < `limit`. Every call records an `htag_calls` row with `rows_returned` and `cost_aud` computed from tier rates in config.

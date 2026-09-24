@@ -11,7 +11,7 @@ src/schema/     One file per table. The source of truth for both types and DDL.
 src/client.ts   Pool factory + drizzle instance.
 src/tenant.ts   withTenant() / withSystemTenant() — the only sanctioned way in.
 src/scripts/    migrate.ts, run by `pnpm db:migrate`.
-sql/            Hand-written DDL for the three things drizzle-kit can't emit.
+sql/            Hand-written DDL for the things drizzle-kit can't emit.
 drizzle/        Generated migrations + journal. Do not edit applied files.
 ```
 
@@ -70,15 +70,24 @@ copying 7,000 suburbs per tenant or making the column nullable.
 
 ## suburb_metrics_ts
 
-A TimescaleDB hypertable, 30-day chunks, ranged on `observed_at`. Long-format
-(`metric_name`, `value`) rather than a column per metric, because HTAG's metric
-set is not ours to freeze and Q01 is still open. Compression is a separate
-migration from the hypertable itself: the compression syntax is the part most
-likely to need adjusting for the TimescaleDB version actually running, and
-isolating it means a mismatch fails after the hypertable is already committed.
+A TimescaleDB hypertable, 30-day chunks, ranged on `measured_at` (HtAG
+`period_end`). It is the per-suburb on-demand hydration cache (D40), keyed the
+way HtAG bills: primary key `(suburb_id, property_type, bedrooms, metric_name,
+measured_at)`, which is also the upsert target. It's long-format (`metric_name`,
+`value`) because HtAG's metric set is not ours to freeze. Timescale rejects any
+unique index that omits the partitioning column; a test enforces it.
 
-Timescale rejects any unique index that omits the partitioning column, so the
-primary key is `(suburb_id, metric_name, observed_at)`. A test enforces it.
+**Changing its columns or key (D60).** Compression blocks PK and
+partitioning-column changes, so a change ships as three migrations:
+
+```bash
+pnpm exec drizzle-kit generate --custom --name=metrics_compression_off   # fill from sql/metrics-compression-off.sql
+pnpm db:generate                                                           # the real delta
+pnpm exec drizzle-kit generate --custom --name=metrics_compression_on    # re-enable, see sql/metrics-compression-on-htag-calls-rls.sql
+```
+
+The off-step truncates the table. That's safe only while it is a re-fetchable
+cache.
 
 **This is the one table with no RLS** (D43). TimescaleDB does not support row
 level security on compressed chunks, so the two cannot coexist here. Compression
