@@ -7,4 +7,4 @@ Vendored third-party skill — do not edit in place; re-vendor to update.
 - License: MIT (see LICENSE)
 - Vendored: 2026-09-30
 
-Upstream README omitted. Nothing modified.
+Upstream README omitted. `SKILL.md`, `references/actions-and-forms.md`, `references/api-cheatsheet.md`, `references/concurrent-ux.md`, and `references/effects-and-data.md` were reformatted by repository tooling; no intentional semantic changes.
