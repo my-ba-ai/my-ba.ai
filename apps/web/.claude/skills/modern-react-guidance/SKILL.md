@@ -109,7 +109,7 @@ Codify “You Might Not Need an Effect”:
 - External store subscriptions → `useSyncExternalStore`.
 - Resetting state on prop change → key the component or compute during render.
 
-Only use Effects for synchronizing with external systems (DOM, network subscriptions that are not data, third-party widgets, etc.). Always clean up.
+Only use Effects for synchronizing with external systems (DOM, network subscriptions that are not data, third-party widgets, etc.). Return a cleanup function when the Effect starts something that must be stopped or undone.
 
 ### 6. MEDIUM — Context & Composition
 
