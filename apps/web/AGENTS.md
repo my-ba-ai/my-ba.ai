@@ -72,6 +72,10 @@ builder** for both `dev` and `build`.
   `table.FlexRender`). Most examples online and in training data are v8 (`useReactTable`,
   `getCoreRowModel`) and won't compile here. The package ships its own agent docs: read
   `node_modules/@tanstack/react-table/skills/*/SKILL.md` before writing a table.
+- React is **19.3** with no React Compiler enabled. For component, form, data-fetching and
+  Effect patterns, read `.claude/skills/modern-react-guidance/SKILL.md` (vendored third-party
+  skill, pinned; see its `SOURCE.md`). Its Compiler rules don't apply until the Compiler is on,
+  and verify any 19.3-only API it names against react.dev before using it.
 - Type is Manrope only (D55). Numbers, codes, IDs and uppercase micro-labels use
   `font-data` (tabular figures). `font-mono` is for raw machine output only (JSON, error
   lines, logs). Never put a metric in `font-mono`.
