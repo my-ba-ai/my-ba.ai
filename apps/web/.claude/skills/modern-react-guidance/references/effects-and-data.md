@@ -11,7 +11,7 @@
 | Subscribe to external store   | `useSyncExternalStore`                                               |
 | Run code on mount only        | Rarely needed; prefer event handlers or layout effects carefully     |
 
-Only keep an Effect when you are synchronizing with an external system that React does not know about (DOM measurements that must happen after paint, third-party widgets, WebSocket that is not data, etc.). Always return a cleanup function.
+Only keep an Effect when you are synchronizing with an external system that React does not know about (DOM measurements that must happen after paint, third-party widgets, WebSocket that is not data, etc.). Return a cleanup function when the Effect starts something that must be stopped or undone.
 
 ## Modern Data Fetching
 
