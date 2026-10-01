@@ -8,6 +8,8 @@ import {
   percentileRanks,
   RANKING_TARGETS,
   rankSuburbs,
+  rankedListSchema,
+  rankedSchema,
   rawMetricsSchema,
 } from "./rank"
 
@@ -228,6 +230,66 @@ describe("bandScore / ceilingScore (D68)", () => {
     expect(ceilingScore(0.425, ceiling)).toBeCloseTo(0.5, 12)
     expect(ceilingScore(0.5, ceiling)).toBe(0)
     expect(ceilingScore(0.8, ceiling)).toBe(0)
+  })
+})
+
+describe("outbound schemas (AGENTS.md: Zod at every boundary)", () => {
+  const weights = presetWeights("balanced", "low")
+  const ranked = rankSuburbs(
+    [full("A", 1), full("B", 2), { areaId: "C", yieldNow: 0.03 }, { areaId: "D" }],
+    weights,
+    { disabledFactors: ["low_volatility"] },
+  )
+  const sample = ranked[0]!
+
+  it("rankSuburbs output round-trips through rankedListSchema unchanged", () => {
+    expect(rankedListSchema.parse(ranked)).toEqual(ranked)
+    expect(new Set(ranked.flatMap((r) => Object.values(r.breakdown).map((f) => f.status)))).toEqual(
+      new Set(["used", "missing", "disabled"]),
+    )
+  })
+
+  it("rejects a breakdown missing a factor or carrying an unknown one", () => {
+    const { renter_band: _drop, ...missing } = sample.breakdown
+    expect(rankedSchema.safeParse({ ...sample, breakdown: missing }).success).toBe(false)
+    const extra = { ...sample.breakdown, rcs_overall: sample.breakdown.yield_now }
+    expect(rankedSchema.safeParse({ ...sample, breakdown: extra }).success).toBe(false)
+  })
+
+  it("rejects unknown top-level keys and out-of-range numbers", () => {
+    expect(rankedSchema.safeParse({ ...sample, dex: 1 }).success).toBe(false)
+    expect(rankedSchema.safeParse({ ...sample, coverage: 1.5 }).success).toBe(false)
+    expect(rankedSchema.safeParse({ ...sample, rank: 0 }).success).toBe(false)
+  })
+
+  it("rejects a breakdown whose status and numbers disagree", () => {
+    const used = sample.breakdown.yield_now
+    const bad = [
+      { ...used, factorScore: null },
+      { ...used, status: "missing" },
+      { ...used, status: "disabled" },
+      { ...used, contribution: used.contribution + 0.1 },
+    ]
+    for (const yieldNow of bad) {
+      const result = rankedSchema.safeParse({
+        ...sample,
+        breakdown: { ...sample.breakdown, yield_now: yieldNow },
+      })
+      expect(result.success).toBe(false)
+    }
+  })
+
+  it("rejects insufficientData, score or coverage that disagree", () => {
+    expect(rankedSchema.safeParse({ ...sample, insufficientData: true }).success).toBe(false)
+    expect(rankedSchema.safeParse({ ...sample, score: null }).success).toBe(false)
+    expect(rankedSchema.safeParse({ ...sample, coverage: sample.coverage - 0.1 }).success).toBe(
+      false,
+    )
+  })
+
+  it("rejects ranks that are not 1..n in order", () => {
+    const swapped = [{ ...ranked[1]!, rank: 1 }, { ...ranked[0]!, rank: 1 }, ...ranked.slice(2)]
+    expect(rankedListSchema.safeParse(swapped).success).toBe(false)
   })
 })
 

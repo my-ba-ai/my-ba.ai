@@ -113,6 +113,7 @@ export function percentileRanks(
   const defined = values
     .map((value, index) => ({ value, index }))
     .filter((entry): entry is { value: number; index: number } => entry.value !== undefined)
+    // oxlint-disable-next-line unicorn/no-array-sort
     .sort((a, b) => a.value - b.value)
 
   const out: Array<number | undefined> = values.map(() => undefined)
@@ -138,38 +139,109 @@ export function percentileRanks(
 export const FACTOR_STATUSES = ["used", "missing", "disabled", "zero_weight"] as const
 export type FactorStatus = (typeof FACTOR_STATUSES)[number]
 
-export interface FactorBreakdown {
-  method: ScoringMethod
-  /** Raw value as read from `RawMetrics`. `null` when missing. */
-  raw: number | null
-  /**
-   * Factor score in [0, 1], 1 = best: an oriented percentile for `percentile`
-   * factors, the band / ceiling curve otherwise. `null` when missing or not scored.
-   */
-  factorScore: number | null
-  /** Effective weight after removing disabled / zero factors and renormalising. */
-  weight: number
-  /** Share of `score` from this factor; contributions of a suburb sum to its score. */
-  contribution: number
-  status: FactorStatus
-}
+/**
+ * Slack for floating-point sums (coverage, score, contributions) that land a
+ * hair above 1 or off each other in the last bits. Never a semantic allowance.
+ */
+export const RANKED_FLOAT_TOLERANCE = 1e-9
+
+const unitInterval = z
+  .number()
+  .finite()
+  .min(0)
+  .max(1 + RANKED_FLOAT_TOLERANCE)
+
+/**
+ * One factor's line in a suburb's score breakdown. Status and numbers must
+ * agree: only a `used` factor has a `factorScore` and a contribution, and only
+ * an enabled factor (`used` / `missing`) carries a weight.
+ */
+export const factorBreakdownSchema = z
+  .strictObject({
+    method: z.enum(SCORING_METHODS),
+    /** Raw value as read from `RawMetrics`. `null` when missing. */
+    raw: z.number().finite().nullable(),
+    /**
+     * Factor score in [0, 1], 1 = best: an oriented percentile for `percentile`
+     * factors, the band / ceiling curve otherwise. `null` when missing or not scored.
+     */
+    factorScore: unitInterval.nullable(),
+    /** Effective weight after removing disabled / zero factors and renormalising. */
+    weight: unitInterval,
+    /** Share of `score` from this factor; contributions of a suburb sum to its score. */
+    contribution: unitInterval,
+    status: z.enum(FACTOR_STATUSES),
+  })
+  .superRefine((f, ctx) => {
+    const issue = (message: string) => ctx.addIssue({ code: "custom", message })
+    if (f.status === "used") {
+      if (f.factorScore === null) issue("A used factor must have a factorScore")
+      if (f.raw === null) issue("A used factor must have a raw value")
+      if (f.weight === 0) issue("A used factor must have a weight > 0")
+      return
+    }
+    if (f.factorScore !== null) issue(`A ${f.status} factor must not have a factorScore`)
+    if (f.contribution !== 0) issue(`A ${f.status} factor must contribute 0`)
+    if (f.status === "missing" && f.weight === 0) issue("A missing factor must have a weight > 0")
+    if ((f.status === "disabled" || f.status === "zero_weight") && f.weight !== 0) {
+      issue(`A ${f.status} factor must have weight 0`)
+    }
+  })
+export type FactorBreakdown = z.infer<typeof factorBreakdownSchema>
 
 /**
  * One ranked suburb. Stored as `screening_results.score_breakdown_json` (P1-4).
  * Percentile factors are relative to the task's survivor set, so raw values
- * are kept (D44).
+ * are kept (D44). `rankSuburbs` parses every result through this schema before
+ * it leaves the package (outbound boundary).
  */
-export interface Ranked {
-  areaId: string
-  /** 1-based position in the returned order. */
-  rank: number
-  /** Weighted mean of available factor scores, 0–1. `null` when no factor is available. */
-  score: number | null
-  /** Sum of effective weights of available factors, 0–1. */
-  coverage: number
-  insufficientData: boolean
-  breakdown: Record<FactorId, FactorBreakdown>
-}
+export const rankedSchema = z
+  .strictObject({
+    areaId: z.string().min(1),
+    /** 1-based position in the returned order. */
+    rank: z.number().int().min(1),
+    /** Weighted mean of available factor scores, 0–1. `null` when no factor is available. */
+    score: unitInterval.nullable(),
+    /** Sum of effective weights of available factors, 0–1. */
+    coverage: unitInterval,
+    insufficientData: z.boolean(),
+    /** Exhaustive over `FACTOR_IDS`: a missing or unknown factor key is rejected. */
+    breakdown: z.record(factorIdSchema, factorBreakdownSchema),
+  })
+  .superRefine((r, ctx) => {
+    const issue = (message: string) => ctx.addIssue({ code: "custom", message })
+    if (r.insufficientData !== r.coverage < INSUFFICIENT_COVERAGE_THRESHOLD) {
+      issue("insufficientData must be exactly coverage < INSUFFICIENT_COVERAGE_THRESHOLD")
+    }
+    if ((r.score === null) !== (r.coverage === 0)) {
+      issue("score must be null exactly when coverage is 0")
+    }
+    const factors = Object.values(r.breakdown)
+    const usedWeight = factors
+      .filter((f) => f.status === "used")
+      .reduce((sum, f) => sum + f.weight, 0)
+    if (Math.abs(usedWeight - r.coverage) > RANKED_FLOAT_TOLERANCE) {
+      issue("coverage must equal the sum of used factors' weights")
+    }
+    const contributions = factors.reduce((sum, f) => sum + f.contribution, 0)
+    if (Math.abs(contributions - (r.score ?? 0)) > RANKED_FLOAT_TOLERANCE) {
+      issue("contributions must sum to score")
+    }
+  })
+export type Ranked = z.infer<typeof rankedSchema>
+
+/** `rankSuburbs` output: ranks are exactly 1..n in order. */
+export const rankedListSchema = z.array(rankedSchema).superRefine((list, ctx) => {
+  list.forEach((r, index) => {
+    if (r.rank !== index + 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: [index, "rank"],
+        message: `Expected rank ${index + 1}, got ${r.rank}`,
+      })
+    }
+  })
+})
 
 export interface RankOptions {
   /** Factors switched off for this run (e.g. `low_volatility` with < 18 price points, P1-4). */
@@ -234,50 +306,49 @@ export function rankSuburbs(
   const unsorted = parsedMetrics.map((m, i) => {
     let coverage = 0
     let weighted = 0
-    for (const [id, w] of effective) {
+    effective.forEach((w, id) => {
       const s = scoreByFactor.get(id)![i]
       if (s !== undefined) {
         coverage += w
         weighted += w * s
       }
-    }
+    })
     const score = coverage > 0 ? weighted / coverage : null
 
-    const breakdown = {} as Record<FactorId, FactorBreakdown>
-    for (const id of FACTOR_IDS) {
-      const method = FACTOR_SCORING[id].method
-      const raw = rawByFactor.get(id)![i] ?? null
-      const w = effective.get(id)
-      const s = scoreByFactor.get(id)?.[i]
-      if (w === undefined) {
-        breakdown[id] = {
-          method,
-          raw,
-          factorScore: null,
-          weight: 0,
-          contribution: 0,
-          status: disabled.has(id) && parsedWeights[id] > 0 ? "disabled" : "zero_weight",
+    // Assembled untyped on purpose: the shape is enforced by `rankedListSchema`
+    // on the way out, not asserted here.
+    const breakdown = Object.fromEntries(
+      FACTOR_IDS.map((id) => {
+        const method = FACTOR_SCORING[id].method
+        const raw = rawByFactor.get(id)![i] ?? null
+        const w = effective.get(id)
+        const s = scoreByFactor.get(id)?.[i]
+        if (w === undefined) {
+          const status = disabled.has(id) && parsedWeights[id] > 0 ? "disabled" : "zero_weight"
+          return [
+            id,
+            { method, raw, factorScore: null, weight: 0, contribution: 0, status },
+          ] as const
         }
-      } else if (s === undefined) {
-        breakdown[id] = {
-          method,
-          raw,
-          factorScore: null,
-          weight: w,
-          contribution: 0,
-          status: "missing",
+        if (s === undefined) {
+          return [
+            id,
+            { method, raw, factorScore: null, weight: w, contribution: 0, status: "missing" },
+          ] as const
         }
-      } else {
-        breakdown[id] = {
-          method,
-          raw,
-          factorScore: s,
-          weight: w,
-          contribution: (w * s) / coverage,
-          status: "used",
-        }
-      }
-    }
+        return [
+          id,
+          {
+            method,
+            raw,
+            factorScore: s,
+            weight: w,
+            contribution: (w * s) / coverage,
+            status: "used",
+          },
+        ] as const
+      }),
+    )
 
     return {
       areaId: m.areaId,
@@ -299,5 +370,6 @@ export function rankSuburbs(
     return a.areaId < b.areaId ? -1 : a.areaId > b.areaId ? 1 : 0
   })
 
-  return unsorted.map((entry, index) => ({ ...entry, rank: index + 1 }))
+  // Outbound boundary (AGENTS.md: Zod at every boundary, inbound and outbound).
+  return rankedListSchema.parse(unsorted.map((entry, index) => ({ ...entry, rank: index + 1 })))
 }

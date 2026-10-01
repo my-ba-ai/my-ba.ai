@@ -407,6 +407,8 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 
 **Verified (2026-10-01, Brian).** Code reviewed; `pnpm check` passes (typecheck, lint, format, and the `@my-ba/domain` Vitest suites with the presets snapshot regenerated for D68, AC 1–7). **P1-8 complete.**
 
+**Follow-up (2026-10-01, review).** Outbound boundary: `factorBreakdownSchema`, `rankedSchema` and `rankedListSchema` (Zod) now define `FactorBreakdown` and `Ranked` (types inferred), and `rankSuburbs` parses its result before returning. The schemas are strict and enforce the invariants: `breakdown` exhaustive over `FACTOR_IDS`; status agrees with `factorScore` / `weight` / `contribution`; `insufficientData` ⇔ coverage < 0.5; `score` null ⇔ coverage 0; coverage = sum of used weights; contributions sum to `score`; ranks 1..n. Float slack 1e-9 (`RANKED_FLOAT_TOLERANCE`). P1-4 can reuse `rankedSchema` to parse `score_breakdown_json` on read. 49 specs pass under the Node shim; needs your `pnpm check`.
+
 ### P1-9 — HtAG attribution component
 
 **Description:** Design-system component rendering "Powered by HtAG Analytics" linked to `https://developer.htagai.com` plus the not-financial-advice disclaimer (D38). Used on every view showing HtAG-derived data.

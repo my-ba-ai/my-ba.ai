@@ -213,7 +213,7 @@ awaiting verification. P0-7 is done: the CI `integration` job runs the P0-5
 durability suite and is a required check on `main`. P0-8 (gitleaks secret
 scanning in CI + pre-commit) is implemented and awaiting verification on
 GitHub. Phase 1: P1-0 (HtAG schema delta) is done; P1-1 (HtAG REST client,
-`packages/htag-client`) is done. P1-8 (ranking) is next.
+`packages/htag-client`) is done. P1-8 (ranking) is done.
 
 HtAG calls go through `@my-ba/htag-client` only, and only from the API or
 worker: the key is server-side (T&C cl. 36) and `pnpm lint` fails if `apps/web`
