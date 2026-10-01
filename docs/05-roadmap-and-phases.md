@@ -285,7 +285,7 @@ Folded into P1-4 (on-demand trend hydration). The scheduled national refresh wor
 **Description:** `CriteriaSchema` (Zod) in `packages/shared`, saved to `purchase_tasks.criteria_json`, compiled to HtAG `logic` by pure `compileToHtagLogic`. Next.js 3-step form (React Hook Form + Zod resolver):
 
 1. **Strategy & risk** — strategy (growth / cashflow / balanced), risk (low / medium / high), task name, target states, property type. Selecting both prefills filters and weights from the preset (P1-8).
-2. **Criteria** — toggleable filters: typical price range, gross yield % range, vacancy rate % max, stock on market % max, days on market max, annual sales volume min, IRSAD decile min, high-confidence-only (default on). Collapsible "Customise ranking weights" panel (sliders, normalised to 1 on save).
+2. **Criteria** — toggleable filters: typical price range, gross yield % range, vacancy rate % max, stock on market % max, days on market max, 36-month price growth % max (compiled to a 3-year CAGR, D68), annual sales volume min, IRSAD decile min, high-confidence-only (default on). Collapsible "Customise ranking weights" panel (sliders, normalised to 1 on save).
 3. **Review** — criteria + profile summary, preset badge (with "custom" flags), estimated HtAG cost ceiling, "Create Task & Run Screening" / "Save as Draft".
 
 Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, filtersCustomised }`. Percent inputs converted to fractions in `compileToHtagLogic`, not in the form.
@@ -296,7 +296,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 2. `compileToHtagLogic` snapshot-tested: every filter, percent→fraction scaling, all filters off (bedrooms + state + confidence leaves only).
 3. Editing any preset-prefilled filter sets `filtersCustomised`; editing any weight sets `weightsCustomised`. Switching preset after edits requires confirmation.
 4. **Before merge:** zero-cost probe of `state` field (`typical_price gte 999999999` + `state in ["QLD"]`). If rejected, record in Q16 and remove the leaf (state filtering then handled by a verified field or area-ID scoping — never by post-truncation local filtering).
-5. **Before merge:** manual check of `vacancy_rate` units; record finding in PR and Q16.
+5. **Before merge:** manual check of `vacancy_rate` units; record finding in PR and Q16. Zero-cost probe of `price_3y_cagr` as a `logic` field (`typical_price gte 999999999` + `price_3y_cagr lte 0.1447`); if rejected, use the `price_3y_cagr_max` request field and record the D42 exception (D68).
 6. Draft saves with partial criteria; "Run" requires full parse.
 7. Clone (Phase 3) opens this form pre-filled from the source task's profile — form accepts an initial `Criteria` value.
 
@@ -309,10 +309,10 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 1. Compile criteria → `POST /markets/query`, `limit` from config (`SCREEN_QUERY_LIMIT`, default 100).
 2. If returned == limit → `interrupt({ type: 'SCREENING_TOO_BROAD', criteria, returned })`. No further calls.
 3. Upsert returned areas into `Suburbs` (by `htag_area_id`).
-4. Hydrate Reference-tier `trends/price` (24 points), `trends/rent` (9), `trends/yield` (1) for survivors via comma-list batches with `period_end_min`; reuse cached rows already in `SuburbMetricsTS` (D40).
+4. Hydrate Reference-tier `trends/price` (37 points, for 36-month growth — D68), `trends/rent` (13, for 12-month growth), `trends/yield` (1) for survivors via comma-list batches with `period_end_min`; reuse cached rows already in `SuburbMetricsTS` (D40).
 5. Join ABS renter proportion (P1-10) where available.
 6. Build `RawMetrics[]` → `rankSuburbs(metrics, criteria.profile.weights, { disabledFactors })` (P1-8).
-7. Restricted hydration: `trends/stock-on-market`, `trends/days-on-market`, `trends/vacancy` latest period for top N (`SCREEN_RESTRICTED_TOP_N`, default 6).
+7. Restricted hydration: `trends/stock-on-market`, `trends/days-on-market`, `trends/vacancy` latest period for top N (`SCREEN_RESTRICTED_TOP_N`, default 6). Trend-direction flags and long-term factors on this shortlist are Q21.
 8. Write `ScreeningResults` (score, `Ranked` breakdown) and `AnalysisSteps` (request bodies, rows, `costAud`, `presetVersion`, customised flags).
 9. `interrupt({ type: 'SCREENING_APPROVAL', criteria, rankedSuburbs, costAud })`.
 
@@ -367,31 +367,45 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 
 ### P1-8 — Suburb ranking module
 
-**Description:** `packages/domain/src/ranking/` — `presets.ts` (`Strategy`, `RiskTolerance`, `FactorId`, `Weights`, `PRESET_VERSION`, `presetWeights`, preset filter defaults) and `rank.ts` (`RawMetrics`, `rankSuburbs`, `percentileRanks`). No I/O, no LLM, no HtAG proprietary scores (D39, D44). Presets per D17/D19:
+**Description:** `packages/domain/src/ranking/` (`@my-ba/domain`) — `presets.ts` (`Strategy`, `RiskTolerance`, `FactorId`, `Weights`, `PRESET_VERSION`, `presetWeights`, preset filter defaults) and `rank.ts` (`RawMetrics`, `rankSuburbs`, `percentileRanks`). No I/O, no LLM, no HtAG proprietary scores (D39, D44). Factors and presets per D68 (amends D17/D44), filters per D19/D68:
 
-| Strategy | Base weights                                                              | Filter defaults |
-| -------- | ------------------------------------------------------------------------- | --------------- |
-| Growth   | price_mom_6m 0.45 · rent_mom_6m 0.20 · owner_share 0.25 · yield_now 0.10  | —               |
-| Cashflow | yield_now 0.50 · rent_mom_6m 0.30 · renter_share 0.15 · price_mom_6m 0.05 | yield ≥ 4.5%    |
-| Balanced | yield_now 0.30 · price_mom_6m 0.30 · rent_mom_6m 0.30 · renter_share 0.10 | yield ≥ 3.5%    |
+| Strategy | Base weights                                                                     | Filter defaults |
+| -------- | -------------------------------------------------------------------------------- | --------------- |
+| Growth   | rent_growth_12m 0.35 · price_growth_36m 0.30 · renter_band 0.20 · yield_now 0.15 | —               |
+| Cashflow | yield_now 0.50 · rent_growth_12m 0.30 · renter_band 0.15 · price_growth_36m 0.05 | yield ≥ 4.5%    |
+| Balanced | yield_now 0.30 · rent_growth_12m 0.30 · price_growth_36m 0.25 · renter_band 0.15 | yield ≥ 3.5%    |
 
-| Risk   | low_volatility weight (base scaled by 1 − w) | Filter defaults                                               |
-| ------ | -------------------------------------------- | ------------------------------------------------------------- |
-| Low    | 0.25                                         | confidence High · IRSAD ≥ 5 · vacancy ≤ 1.5% · sales ≥ 100/yr |
-| Medium | 0.10                                         | confidence High · IRSAD ≥ 3 · vacancy ≤ 2.5% · sales ≥ 50/yr  |
-| High   | 0                                            | confidence any · vacancy ≤ 4% · sales ≥ 20/yr                 |
+| Risk   | low_volatility weight (base scaled by 1 − w) | Filter defaults                                                                                          |
+| ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Low    | 0.25                                         | confidence High · IRSAD ≥ 5 · vacancy ≤ 1.5% · SOM ≤ 1.3% · DOM ≤ 50 · 36m growth ≤ 50% · sales ≥ 100/yr |
+| Medium | 0.10                                         | confidence High · IRSAD ≥ 3 · vacancy ≤ 2.5% · SOM ≤ 1.3% · DOM ≤ 65 · 36m growth ≤ 50% · sales ≥ 50/yr  |
+| High   | 0                                            | confidence any · vacancy ≤ 4% · SOM ≤ 2% · DOM ≤ 90 · sales ≥ 20/yr                                      |
 
 **Acceptance criteria:**
 
 1. `presetWeights` sums to 1 (±1e-9) for all 9 combinations; snapshot-tested.
 2. `percentileRanks` handles ties (average rank), n = 1 (0.5), all-undefined.
-3. Disabled factor → remaining weights renormalise; coverage not penalised.
+3. Disabled factor → remaining weights renormalise; coverage not penalised. `renter_band` and `price_growth_36m` use D68's absolute curves (band, ceiling), not percentiles.
 4. Coverage < 50% → `insufficientData`, sorted below all sufficient suburbs.
 5. Deterministic tie-break on `areaId`; stable output across runs.
-6. `Weights` rejects `renter_share` + `owner_share` both > 0, and all-zero.
+6. `Weights` rejects all-zero, unknown or missing keys, and vectors not summing to 1 (the renter/owner exclusivity rule retired with D68).
 7. Test asserts `RawMetrics` contains no RCS/Dex/GRC or other HtAG-proprietary fields.
 
 **Dependencies:** none. **Risk:** low.
+
+**Implemented (2026-10-01).** Built ahead of P1-3, which depends on it. Deltas from the description above:
+
+- **Package:** `packages/domain` didn't exist; it is now `@my-ba/domain` (D67), a pure package (Zod only, no I/O, env, DB or LLM), same build shape as `@my-ba/shared` (CJS `dist`). Files: `src/ranking/presets.ts`, `src/ranking/rank.ts`.
+- **`RawMetrics` is factor-level, not series-level:** `{ areaId, yieldNow, rentGrowth12m, priceGrowth36m, renterProportion, priceVolatility }`, each nullish. Deriving growth and volatility from HtAG trend rows is P1-4's job (it owns the < 18-points rule too). `rawMetricsSchema` is strict, so an HtAG proprietary field is rejected at the boundary (AC 7).
+- **Reworked to D68 before verification:** factor set, band / ceiling scoring (`FACTOR_SCORING`, `RANKING_TARGETS`, `bandScore`, `ceilingScore`), weights and filter defaults as in the tables above.
+- **`Weights` is stored normalised:** strict, all five factors, each in [0, 1], sum = 1 ± 1e-6. `normaliseWeights()` is exported for P1-3's sliders ("normalised to 1 on save").
+- **Preset filter defaults** are `presetFilterDefaults(strategy, risk)` → `{ minGrossYieldPct?, maxVacancyRatePct?, maxStockOnMarketPct?, maxDaysOnMarket?, maxPriceGrowth36mPct?, minAnnualSalesVolume?, minIrsadDecile?, confidence: "high" | "any" }`, in percent as the investor types them (P1-3's compiler converts to fractions). `minIrsadDecile` keeps the roadmap's wording; HtAG `irsad` units are confirmed in P1-3.
+- **`PRESET_VERSION`** = `"2026-10-01.v1"`.
+- **`Ranked`** = `{ areaId, rank, score, coverage, insufficientData, breakdown }`. `breakdown` has every factor: `{ method: percentile | band | ceiling, raw, factorScore, weight, contribution, status: used | missing | disabled | zero_weight }`. `weight` is the effective (renormalised) weight; contributions sum to `score`. `score` is `null` when coverage is 0. Semantics recorded in D67.
+- **Errors:** `rankSuburbs` throws on invalid weights or metrics, duplicate `areaId`, or when every weighted factor is disabled. An empty survivor set returns `[]`.
+- **Tests:** `presets.spec.ts` (AC 1 incl. a snapshot of all 9 vectors, AC 6, filter defaults) and `rank.spec.ts` (AC 2–5, 7). **Pre-verification run (Claude, 2026-10-01):** `tsc` clean for src and specs; all 43 specs pass under Node's test runner with a Vitest-compatible shim (Vitest's native rollup binary doesn't run in that environment). The snapshot file is not committed yet: the first local `vitest run` writes it, and CI fails on a missing snapshot.
+
+**Verified (2026-10-01, Brian).** Code reviewed; `pnpm check` passes (typecheck, lint, format, and the `@my-ba/domain` Vitest suites with the presets snapshot regenerated for D68, AC 1–7). **P1-8 complete.**
 
 ### P1-9 — HtAG attribution component
 

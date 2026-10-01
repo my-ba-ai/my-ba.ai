@@ -14,6 +14,7 @@ the first thing to read before proposing anything architectural.
 | `apps/worker`     | NestJS standalone context — BullMQ processors. Scales independently of the API.      |
 | `packages/db`     | Drizzle schema, migrations, pool factory, tenant-scoped transaction wrapper.         |
 | `packages/shared` | Zod schemas, domain types, queue names. The contract all three apps compile against. |
+| `packages/domain` | Pure domain logic (Zod only, no I/O). Ranking presets and `rankSuburbs` (P1-8).      |
 | `packages/config` | Shared tsconfig presets: `base` / `lib` / `nest` / `next`.                           |
 
 ## Rules that are not negotiable
