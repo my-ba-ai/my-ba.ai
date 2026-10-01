@@ -177,4 +177,12 @@ Phase 1 — HtAG Integration + Suburb Screener:
   billing columns. gitleaks gains an `htag-api-key` rule. `pnpm db:migrate`,
   `pnpm check`, `pnpm test:integration` and `pnpm secrets:scan` pass (2026-10-01).
 
-Next up: **P1-8** (ranking module).
+- **P1-8 complete:** `@my-ba/domain`, a new pure package. `presetWeights` for
+  the 9 strategy × risk presets and `presetFilterDefaults` (D17, D19, D68),
+  `PRESET_VERSION`, a strict normalised `Weights` schema, and `rankSuburbs`:
+  yield, rent growth and volatility ranked within the survivor set; a 36-month
+  growth ceiling and a 15–35% renter band on absolute curves; `insufficientData`
+  below 50% coverage; `areaId` tie-break (D44, D67, D68). Q02 resolved: criteria
+  are fixed fields (D66). `pnpm check` passes (2026-10-01).
+
+Next up: **P1-3** (criteria schema + form).

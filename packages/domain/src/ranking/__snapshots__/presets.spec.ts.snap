@@ -1,0 +1,72 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`presetWeights (AC 1) > snapshots all 9 presets 1`] = `
+{
+  "PRESET_VERSION": "2026-10-01.v1",
+  "table": {
+    "balanced/high": {
+      "low_volatility": 0,
+      "price_growth_36m": 0.25,
+      "rent_growth_12m": 0.3,
+      "renter_band": 0.15,
+      "yield_now": 0.3,
+    },
+    "balanced/low": {
+      "low_volatility": 0.25,
+      "price_growth_36m": 0.1875,
+      "rent_growth_12m": 0.225,
+      "renter_band": 0.1125,
+      "yield_now": 0.225,
+    },
+    "balanced/medium": {
+      "low_volatility": 0.1,
+      "price_growth_36m": 0.225,
+      "rent_growth_12m": 0.27,
+      "renter_band": 0.135,
+      "yield_now": 0.27,
+    },
+    "cashflow/high": {
+      "low_volatility": 0,
+      "price_growth_36m": 0.05,
+      "rent_growth_12m": 0.3,
+      "renter_band": 0.15,
+      "yield_now": 0.5,
+    },
+    "cashflow/low": {
+      "low_volatility": 0.25,
+      "price_growth_36m": 0.0375,
+      "rent_growth_12m": 0.225,
+      "renter_band": 0.1125,
+      "yield_now": 0.375,
+    },
+    "cashflow/medium": {
+      "low_volatility": 0.1,
+      "price_growth_36m": 0.045,
+      "rent_growth_12m": 0.27,
+      "renter_band": 0.135,
+      "yield_now": 0.45,
+    },
+    "growth/high": {
+      "low_volatility": 0,
+      "price_growth_36m": 0.3,
+      "rent_growth_12m": 0.35,
+      "renter_band": 0.2,
+      "yield_now": 0.15,
+    },
+    "growth/low": {
+      "low_volatility": 0.25,
+      "price_growth_36m": 0.225,
+      "rent_growth_12m": 0.2625,
+      "renter_band": 0.15,
+      "yield_now": 0.1125,
+    },
+    "growth/medium": {
+      "low_volatility": 0.1,
+      "price_growth_36m": 0.27,
+      "rent_growth_12m": 0.315,
+      "renter_band": 0.18,
+      "yield_now": 0.135,
+    },
+  },
+}
+`;
