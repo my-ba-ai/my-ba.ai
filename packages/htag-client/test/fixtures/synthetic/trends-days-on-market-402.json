@@ -1,0 +1,18 @@
+{
+  "name": "trends-days-on-market-402",
+  "synthetic": true,
+  "note": "Body and headers as observed live on 2026-09-30 when the free allowance and balance were both empty. The capture was overwritten by the funded re-run, so it is kept here verbatim.",
+  "request": {
+    "method": "GET",
+    "path": "/markets/trends/days-on-market",
+    "query": "level=suburb&area_id=ACT101&property_type=house&limit=3",
+    "body": null
+  },
+  "status": 402,
+  "headers": { "content-type": "application/json" },
+  "body": {
+    "error": "payment_required",
+    "message": "Free allowance exhausted and balance is empty. Please top up to continue.",
+    "balance": "0"
+  }
+}

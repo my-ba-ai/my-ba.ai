@@ -94,5 +94,8 @@ describe("schema", () => {
     const callChecks = getTableConfig(schema.htagCalls).checks.map((c) => c.name)
     expect(metricChecks).toContain("suburb_metrics_ts_property_type_check")
     expect(callChecks).toContain("htag_calls_tier_check")
+    expect(callChecks).toContain("htag_calls_cost_source_check")
+    expect(callChecks).toContain("htag_calls_billing_tier_check")
+    expect(callChecks).toContain("htag_calls_billed_units_check")
   })
 })

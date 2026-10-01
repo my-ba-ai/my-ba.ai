@@ -1,0 +1,47 @@
+{
+  "name": "trends-days-on-market",
+  "synthetic": false,
+  "capturedAt": "2026-09-30T05:06:39Z",
+  "request": {
+    "method": "GET",
+    "path": "/markets/trends/days-on-market",
+    "query": "level=suburb&area_id=ACT101&property_type=house&limit=3",
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "0",
+    "x-billing-units": "3",
+    "x-billing-tier": "tier1",
+    "x-billing-cost": "0.666",
+    "x-billing-balance": "24.334",
+    "x-billing-free-remaining": "0"
+  },
+  "body": {
+    "results": [
+      {
+        "area_id": "ACT101",
+        "period_end": "2026-08-31T00:00:00+00:00",
+        "property_type": "house",
+        "dom": 99,
+        "discounting": null
+      },
+      {
+        "area_id": "ACT101",
+        "period_end": "2026-07-31T00:00:00+00:00",
+        "property_type": "house",
+        "dom": 45,
+        "discounting": null
+      },
+      {
+        "area_id": "ACT101",
+        "period_end": "2026-06-30T00:00:00+00:00",
+        "property_type": "house",
+        "dom": 43,
+        "discounting": null
+      }
+    ],
+    "total": 3
+  }
+}

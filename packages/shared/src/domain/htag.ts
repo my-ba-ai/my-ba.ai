@@ -30,3 +30,21 @@ export const HTAG_TIERS = [
 ] as const
 export const htagTierSchema = z.enum(HTAG_TIERS)
 export type HtagTier = z.infer<typeof htagTierSchema>
+
+/**
+ * `X-Billing-Tier` response header: the volume band the request's last billable
+ * unit landed in. Not the same thing as `HtagTier` — that is the endpoint's value
+ * tier (Reference, Premium, …), which comes from the spec, not a header (D62).
+ */
+export const HTAG_BILLING_TIERS = ["free", "tier1", "tier2", "tier3"] as const
+export const htagBillingTierSchema = z.enum(HTAG_BILLING_TIERS)
+export type HtagBillingTier = z.infer<typeof htagBillingTierSchema>
+
+/**
+ * Where `htag_calls.cost_aud` came from (D62): HtAG's `X-Billing-Cost` header,
+ * rows × the configured rate when a 2xx arrived without billing headers, or
+ * nothing charged (non-2xx, network error).
+ */
+export const HTAG_COST_SOURCES = ["header", "config_estimate", "none"] as const
+export const htagCostSourceSchema = z.enum(HTAG_COST_SOURCES)
+export type HtagCostSource = z.infer<typeof htagCostSourceSchema>

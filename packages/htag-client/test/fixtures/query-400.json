@@ -1,0 +1,27 @@
+{
+  "name": "query-400",
+  "synthetic": false,
+  "capturedAt": "2026-09-30T05:06:35Z",
+  "request": {
+    "method": "POST",
+    "path": "/markets/query",
+    "query": null,
+    "body": {
+      "level": "suburb",
+      "property_types": ["house"],
+      "logic": {
+        "field": "not_a_real_field",
+        "eq": 1
+      },
+      "limit": 1,
+      "offset": 0
+    }
+  },
+  "status": 400,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "detail": "Unknown market query field: not_a_real_field"
+  }
+}

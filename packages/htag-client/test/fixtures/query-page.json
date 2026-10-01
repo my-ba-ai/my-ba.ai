@@ -1,0 +1,82 @@
+{
+  "name": "query-page",
+  "synthetic": false,
+  "capturedAt": "2026-09-30T05:06:36Z",
+  "request": {
+    "method": "POST",
+    "path": "/markets/query",
+    "query": null,
+    "body": {
+      "level": "suburb",
+      "property_types": ["house"],
+      "logic": {
+        "and": [
+          {
+            "field": "bedrooms",
+            "eq": "All"
+          },
+          {
+            "field": "typical_price",
+            "gte": 100000,
+            "lte": 550000
+          }
+        ]
+      },
+      "limit": 3,
+      "offset": 0
+    }
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "3",
+    "x-billing-units": "3",
+    "x-billing-tier": "free",
+    "x-billing-cost": "0",
+    "x-billing-balance": "25",
+    "x-billing-free-remaining": "12"
+  },
+  "body": {
+    "results": [
+      {
+        "area_id": "NSW100",
+        "level": "suburb",
+        "period_end": "2026-08-31",
+        "area_name": "Ashley",
+        "state": "NSW",
+        "property_type": "house",
+        "bedrooms": "All",
+        "typical_price": 461197,
+        "rent": 445,
+        "confidence": "Low"
+      },
+      {
+        "area_id": "NSW1005",
+        "level": "suburb",
+        "period_end": "2026-08-31",
+        "area_name": "Comboyne",
+        "state": "NSW",
+        "property_type": "house",
+        "bedrooms": "All",
+        "typical_price": 509179,
+        "rent": 484,
+        "confidence": "Low"
+      },
+      {
+        "area_id": "NSW101",
+        "level": "suburb",
+        "period_end": "2026-08-31",
+        "area_name": "Ashmont",
+        "state": "NSW",
+        "property_type": "house",
+        "bedrooms": "All",
+        "typical_price": 539356,
+        "rent": 478,
+        "confidence": "High"
+      }
+    ],
+    "total": 3,
+    "limit": 3,
+    "offset": 0
+  }
+}

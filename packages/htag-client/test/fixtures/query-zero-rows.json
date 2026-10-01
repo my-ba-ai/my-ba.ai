@@ -1,0 +1,44 @@
+{
+  "name": "query-zero-rows",
+  "synthetic": false,
+  "capturedAt": "2026-09-30T05:06:35Z",
+  "request": {
+    "method": "POST",
+    "path": "/markets/query",
+    "query": null,
+    "body": {
+      "level": "suburb",
+      "property_types": ["house"],
+      "logic": {
+        "and": [
+          {
+            "field": "bedrooms",
+            "eq": "All"
+          },
+          {
+            "field": "typical_price",
+            "gte": 999999999
+          }
+        ]
+      },
+      "limit": 5,
+      "offset": 0
+    }
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "0",
+    "x-billing-units": "0",
+    "x-billing-tier": "free",
+    "x-billing-cost": "0",
+    "x-billing-balance": "25",
+    "x-billing-free-remaining": "15"
+  },
+  "body": {
+    "results": [],
+    "total": 0,
+    "limit": 5,
+    "offset": 0
+  }
+}

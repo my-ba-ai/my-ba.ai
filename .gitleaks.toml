@@ -24,9 +24,20 @@ regex = '''\b(pk_(?:test|live)_[A-Za-z0-9+/]{16,}={0,2})(?:[\x60'"\s;]|\\[nr]|$)
 entropy = 3
 keywords = ["pk_test_", "pk_live_"]
 
+# HtAG API key (P1-1): `sk-org-` + base64url body (A-Z a-z 0-9 - _), which can
+# itself start with `-`. Format taken from a real portal-issued key on
+# 2026-10-01: body 74 chars; the range allows for variation across keys. No
+# upstream rule covers it (gitleaks' OpenAI rule only knows sk-proj-/svcacct-/admin-).
+[[rules]]
+id = "htag-api-key"
+description = "HtAG API key"
+regex = '''\b(sk-org-[A-Za-z0-9_-]{60,100})(?:[^A-Za-z0-9_-]|$)'''
+entropy = 3.5
+keywords = ["sk-org-"]
+
 # Other providers get a rule in the ticket that brings them in, once the real
 # key format has been checked in that provider's dashboard or docs (never
-# guessed): HtAG (Phase 1), Domain, Apify, Resend, Cloudflare R2.
+# guessed): Domain, Apify, Resend, Cloudflare R2.
 
 # `*_replace_me` placeholders in .env.example files. No current rule matches
 # them; this stops a future rule from tripping on the documented placeholder.

@@ -1,0 +1,36 @@
+{
+  "name": "query-401",
+  "synthetic": false,
+  "capturedAt": "2026-09-30T05:06:36Z",
+  "request": {
+    "method": "POST",
+    "path": "/markets/query",
+    "query": null,
+    "body": {
+      "level": "suburb",
+      "property_types": ["house"],
+      "logic": {
+        "and": [
+          {
+            "field": "bedrooms",
+            "eq": "All"
+          },
+          {
+            "field": "typical_price",
+            "gte": 999999999
+          }
+        ]
+      },
+      "limit": 5,
+      "offset": 0
+    }
+  },
+  "status": 401,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "message": "Unauthorized",
+    "hint": "Use OAuth2 authorization code flow or provide x-api-key header"
+  }
+}

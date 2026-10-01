@@ -1,0 +1,29 @@
+{
+  "name": "trends-price-400",
+  "synthetic": false,
+  "capturedAt": "2026-09-30T05:06:36Z",
+  "request": {
+    "method": "GET",
+    "path": "/markets/trends/price",
+    "query": "level=not_a_level&area_id=ACT101",
+    "body": null
+  },
+  "status": 400,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "detail": "Invalid request",
+    "errors": [
+      {
+        "type": "enum",
+        "loc": ["query", "level"],
+        "msg": "Input should be 'lga' or 'suburb'",
+        "input": "not_a_level",
+        "ctx": {
+          "expected": "'lga' or 'suburb'"
+        }
+      }
+    ]
+  }
+}

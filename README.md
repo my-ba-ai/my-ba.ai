@@ -15,6 +15,7 @@ packages/
   shared/     Zod schemas, domain types, queue names. The contract between all three apps.
   db/         Drizzle schema, migrations, pool factory, tenant-scoped transactions.
   orchestrator/ Stage orchestration behind the `Orchestrator` interface (LangGraph.js + PostgresSaver).
+  htag-client/ HtAG REST client: fetch + Zod, spend reported via an injected recorder (D63). Server-side only.
   config/     Shared tsconfig presets (base / lib / nest / next).
 infra/
   postgres/   Container init — creates the non-superuser application role.
@@ -81,7 +82,7 @@ anything.
 | `pnpm dev`               | All three apps in watch mode                                               |
 | `pnpm build`             | Turbo build, respecting the dependency graph                               |
 | `pnpm typecheck`         | `tsc --noEmit` across every workspace                                      |
-| `pnpm lint`              | Oxlint                                                                     |
+| `pnpm lint`              | Oxlint, Tailwind canonical check, HtAG-stays-server-side check (P1-1)      |
 | `pnpm format`            | oxfmt (write); `pnpm format:check` in CI                                   |
 | `pnpm test`              | Vitest across every workspace                                              |
 | `pnpm check`             | typecheck + lint + format:check + test — CI `verify` job                   |
@@ -165,4 +166,15 @@ Phase 1 — HtAG Integration + Suburb Screener:
   off/on pair (D60). Migrated cleanly on the existing dev DB;
   `pnpm test:integration` and `pnpm check` pass (2026-09-24).
 
-Next up: **P1-1** (HtAG REST client) and **P1-8** (ranking module).
+- **P1-1 complete:** `@my-ba/htag-client` —
+  `queryMarkets` (one page + `truncated`, D42/D64), `summary` and six `trends`
+  series (auto-paginated), typed errors, retries on 5xx/network only, row
+  normalisation (DOM `0`, vacancy `-1`, `period_end`, `confidence`). Contract
+  tests run on fixtures captured from the live API (`scripts/htag/capture-fixtures.sh`);
+  `docs/htag/openapi.json` is the vendored spec (D61). Spend goes to `htag_calls`
+  through `createHtagCallRecorder` in `@my-ba/db` (D63) with HtAG's
+  `X-Billing-*` headers as the cost of record (D62); migration `0013` adds the
+  billing columns. gitleaks gains an `htag-api-key` rule. `pnpm db:migrate`,
+  `pnpm check`, `pnpm test:integration` and `pnpm secrets:scan` pass (2026-10-01).
+
+Next up: **P1-8** (ranking module).
