@@ -220,22 +220,61 @@ Governing decisions: D16–D19, D37–D44.
 
 ### P1-1 — HtAG REST client
 
-**Description:** `packages/htag-client`. fetch + Zod. `x-api-key` from env, server-side only (cl. 36). Methods: `queryMarkets(body)`, `trends(metric, { areaIds[], propertyTypes[], periodEndMin?, periodEndMax?, limit, offset })`, `summary(...)`. Comma-joins `area_id`; auto-paginates until page length < `limit`. Every call records an `htag_calls` row with `rows_returned` and `cost_aud` computed from tier rates in config.
+**Reference:** `docs/htag/openapi.json` (HtAG Analytics API v2.0.0, OAS 3.1; D61). Each operation's value tier and monthly cap come from its `x-htg-pricingTier` and `x-htg-rate-limit`.
 
-**Typed errors:** `HtagBadRequestError` (400, carries `detail`), `HtagAuthError` (401), `HtagBalanceExhaustedError` (402, carries `returned`, `remaining_free`), `HtagQuotaExceededError` (429). No retry on 400/401/402/429; exponential backoff on 5xx and network errors only.
+**Description:** New package `packages/htag-client` (`@my-ba/htag-client`): fetch + Zod, no DB dependency. Base URL from `HTAG_BASE_URL` (default `https://api.htagai.com/v1`; `https://api.dev.htagai.com/v1` allowed). `x-api-key` from `HTAG_API_KEY`, server-side only (cl. 36).
 
-**Zod row schemas:** `HtagQueryRecord`, `HtagSummaryRow`, `HtagSomRow`, `HtagDomRow`, trend rows for price/rent/yield. All metric fields nullable. DOM `0` normalised to `null` at the boundary (Q13).
+| Method                   | Endpoint                       | Value tier                                                                                        | Pagination                                                                            |
+| ------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `queryMarkets(body)`     | `POST /markets/query`          | premium                                                                                           | Single page. Returns `{ rows, truncated }`, `truncated = rows.length === limit` (D42) |
+| `summary(params)`        | `GET /markets/summary`         | standard                                                                                          | Auto                                                                                  |
+| `trends(metric, params)` | `GET /markets/trends/{metric}` | reference (`price`, `rent`, `yield`); restricted (`stock-on-market`, `days-on-market`, `vacancy`) | Auto                                                                                  |
+
+- `params` = `{ level, areaIds[], propertyTypes?, bedrooms?, periodEndMin?, periodEndMax? }`. `bedrooms` is typed per metric: the spec has no `bedrooms` on SOM, DOM or vacancy. `periodEnd*` only on trends.
+- `area_id` is comma-joined (Q13e).
+- Auto-pagination: `offset += limit` until a page is shorter than `limit`. `total` is never read (it is the page's row count, D40). Page size from config, default 100 (spec max: 1000 GET, 10000 query).
+- Every HTTP attempt (each page, each retry) is reported to an injected `HtagCallRecorder` (D63): endpoint, request params/body (never the key), value tier, status (null on network error), rows returned, and the parsed `X-Billing-*` headers. Cost of record per D62.
+
+**Typed errors** (body shapes from captured fixtures; the spec's `{ error, message }` is wrong for 400/401): `HtagBadRequestError` (400, carries `detail: string` and optional `errors[]` of `{ type, loc, msg, input, ctx }`), `HtagAuthError` (401, body `{ message, hint }`), `HtagBalanceExhaustedError` (402, body `{ error: "payment_required", message, balance }`; returned by any billable endpoint once the free allowance and balance are both empty, not only `/markets/rank`), `HtagQuotaExceededError` (429, carries `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`; synthetic fixture), `HtagServerError` (5xx after retries), `HtagNetworkError`. Unknown error bodies are kept raw on the error, never thrown away. No retry on any 4xx. Exponential backoff with jitter on 5xx and network errors, max attempts from config (default 3).
+
+**Zod row schemas** (hand-written against the spec, D61): `PublicMarketQueryRecord` (the 10 allow-listed fields), `MarketSummaryRecord`, `ExternalPriceHistoryOut`, `ExternalRentHistoryOut`, `YieldHistoryOut`, `StockOnMarketTrendRecord`, `DaysOnMarketTrendRecord`, `VacancyTrendRecord`. All metric fields nullable, including those the spec marks non-null. Unknown keys stripped. Observed divergences from the spec, followed by the schemas: the yield trend field is `yield_val` (spec: `yield`); `period_end` is a date on `/markets/query` but a `+00:00` timestamp on summary/trends, so it is normalised to `YYYY-MM-DD`; `confidence` is capitalised (`High` / `Medium` / `Low`) and parsed case-insensitively to lower-case. All rates (`gross_yield`, `vacancy_rate`, `som_percent`, `yield_val`) are fractions (e.g. `0.0168`). Trend pages arrive newest `period_end` first. Boundary normalisation: `dom` `0` → `null` (Q13); `vacancy_rate` `-1` → `null` (HtAG data guide: "cannot be calculated"); `som` / `som_percent` `0` kept (valid: no new listings).
+
+**Schema delta — `htag_calls` (D62):** add `billed_units integer null`, `billing_balance_aud numeric(12,4) null`, `billing_tier text null` (CHECK `free | tier1 | tier2 | tier3`), `cost_source text not null default 'none'` (CHECK `header | config_estimate | none`). `tier` keeps meaning the endpoint's value tier. Drizzle-generated migration; D60 does not apply (`htag_calls` is not the hypertable). Vocabularies `HTAG_BILLING_TIERS` and `HTAG_COST_SOURCES` added to `@my-ba/shared` `domain/htag.ts`.
+
+**Recorder (D63):** `HtagCallRecorder` interface in `@my-ba/shared`; `createHtagCallRecorder(db, { tenantId, taskId?, analysisStepId? })` in `@my-ba/db`; `InMemoryHtagCallRecorder` in the client's test utilities.
+
+**Fixtures:** captured by `scripts/htag/capture-fixtures.sh` (run locally, key from env, ≈ AUD $2.50) into `packages/htag-client/test/fixtures/`. Each fixture is `{ name, synthetic, request, status, headers, body }` with response headers verbatim. 429, 5xx and pagination fixtures are hand-written or derived from captured rows and marked `"synthetic": true`. First capture (2026-09-30) ran entirely on the free allowance (`X-Billing-Cost: 0`, `X-Billing-Tier: free`, balance 0); `trends-days-on-market` returned 402, which became the 402 fixture. A DOM 200 and a non-zero-cost fixture need one re-run after a balance top-up.
 
 **Acceptance criteria:**
 
-1. Contract tests run against recorded fixtures (no live key in CI).
-2. Pagination test: 3 pages (100, 100, 37) returns 237 rows; stops on short page, never uses `total`.
-3. Each error class raised from a fixture of the corresponding status.
-4. Zod failure on one row logs and skips that row, does not throw for the batch; failure count returned.
-5. `cost_aud` matches rows × configured tier rate.
-6. Grep/lint check: no HtAG key referenced from `apps/web`.
+1. Contract tests run against fixtures only. No live key in CI; `HTAG_API_KEY` absent from the test env.
+2. Each Zod row schema's key set equals the property set of its spec component in `docs/htag/openapi.json`, modulo an explicit divergence map in the test (currently `yield` → `yield_val`), so a re-downloaded spec that changes shape fails loudly. Every captured fixture body parses.
+3. Pagination: `trends` over pages of 100, 100, 37 returns 237 rows in 3 requests, stops on the short page, and ignores a deliberately wrong `total`.
+4. `queryMarkets`: rows == `limit` → `truncated: true`; fewer → `false`; always exactly one request.
+5. Each error class raised from a fixture of its status. 400 carries `detail` (and `errors[]` for validation failures); 402 carries `balance`; 429 carries the rate-limit headers. 4xx is not retried (one recorder call); 5xx is retried to max attempts (one recorder call per attempt).
+6. One row failing Zod is logged and skipped; `invalidRowCount` returned; the batch does not throw.
+7. Normalisation: `dom: 0` → `null`, `vacancy_rate: -1` → `null`, `som_percent: 0` stays `0`, timestamp `period_end` → date, `confidence` lower-cased.
+8. Cost (D62): 2xx with headers → `cost_aud` = `X-Billing-Cost`, `cost_source = 'header'`, `billed_units` / `billing_balance_aud` / `billing_tier` set. 2xx without headers → rows × configured rate for the value tier, `cost_source = 'config_estimate'`, warning logged. Non-2xx or network error → `cost_aud = 0`, `cost_source = 'none'`.
+9. Recorder (Postgres, integration, as `my_ba_app`): rows land tenant-scoped under RLS; a row survives the caller's transaction rolling back; a recorder that throws is logged at error level and the client still returns the data (D63).
+10. Migration generated from the Drizzle schema, applies cleanly on the existing dev DB; `schema.spec.ts` asserts the new CHECKs.
+11. `apps/web` references neither `HTAG_API_KEY` nor `@my-ba/htag-client` (check in `pnpm lint`). gitleaks passes with fixtures committed.
+12. README Status updated.
 
-**Dependencies:** P0-1, P1-0. **Risk:** low.
+**Dependencies:** P0-1, P1-0. **Risk:** low–medium (fixture capture needs one local run; 402 shape unverified).
+
+**Implemented (2026-09-30).** Deltas from the description above:
+
+- **Fixtures:** the funded re-run captured every endpoint, including a billed DOM call (`X-Billing-Cost: 0.666` = 3 × $0.222, `X-Billing-Tier: tier1`). It overwrote the unfunded run's 402, so that body lives on as `test/fixtures/synthetic/trends-days-on-market-402.json`, verbatim. 429 and 5xx are synthetic. The free allowance is per endpoint (`X-Billing-Free-Remaining` differs by endpoint), so config estimates ignore it and err high.
+- **Row field names stay HtAG's** (`typical_price`, `yield_val`, …), not camelCase, so P1-4 can map them to `metric_name` one-to-one.
+- **`property_type` is sent as repeated params** (`property_type=house&property_type=unit`); `area_id` is comma-joined (Q13e). Multi-value `property_type` is unverified live; every fixture uses one value.
+- **Two extra error classes:** `HtagUnexpectedStatusError` (other 4xx, not retried) and `HtagResponseError` (2xx with a body that isn't `{ results }`; still billed and recorded). Pagination also has a `maxPages` safety stop (default 1000).
+- **`InMemoryHtagCallRecorder` is exported** from the package, for P1-4's tests.
+- **Migration `0013`** (drizzle-generated): the four `htag_calls` columns and three CHECKs. A plain delta; D60 does not apply.
+- **Tests:** `src/client.spec.ts` (AC 1, 3–9), `src/spec-contract.spec.ts` (AC 2: key sets vs spec with the `yield` → `yield_val` divergence map, tiers vs `x-htg-pricingTier`, every 2xx fixture parses), `src/config.spec.ts`; `@my-ba/shared` `htag-call.spec.ts`; `@my-ba/db` `htag-call-recorder.integration.spec.ts` (AC 9: RLS, survives caller rollback, network-error row) and `schema.spec.ts` (AC 10 CHECKs). AC 11: `scripts/check-web-htag-boundary.mjs` in `pnpm lint`.
+- **Pre-verification run (Claude, 2026-09-30):** `tsc` clean for `@my-ba/shared`, `@my-ba/db` (including the integration spec) and `@my-ba/htag-client` (src + specs). The 65 client specs and 4 shared specs pass under Node's test runner with a Vitest-compatible shim (Vitest itself couldn't run in that environment).
+- **gitleaks:** `htag-api-key` rule added to `.gitleaks.toml` (`sk-org-` + 60–100 base64url chars), from a real portal-issued key's format. Regex checked against same-shape random strings: catches dotenv, quoted, header and JSON forms; ignores empty placeholders, prose mentions and OpenAI `sk-proj-` keys.
+
+**Verified (2026-10-01, Brian).** `pnpm db:migrate` applies `0013` cleanly on the existing dev DB (AC 10). `pnpm check` passes: typecheck, lint including `check-web-htag-boundary` (AC 11), format, and the Vitest suites for `@my-ba/htag-client`, `@my-ba/shared` and `@my-ba/db` (AC 1–8, 10). `pnpm test:integration` passes, including `htag-call-recorder.integration.spec.ts` (AC 9). `pnpm secrets:scan` and the pre-commit gitleaks run are clean with the `htag-api-key` rule (AC 11). **P1-1 complete.**
 
 ### P1-2 — _Retired_
 

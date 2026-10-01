@@ -1,4 +1,4 @@
-import { HTAG_TIERS } from "@my-ba/shared"
+import { HTAG_BILLING_TIERS, HTAG_COST_SOURCES, HTAG_TIERS } from "@my-ba/shared"
 import { sql } from "drizzle-orm"
 import {
   check,
@@ -14,10 +14,14 @@ import {
 import { purchaseTasks } from "./purchase-tasks"
 import { tenants } from "./tenants"
 
-const tierList = sql.raw(HTAG_TIERS.map((value) => `'${value}'`).join(", "))
+const sqlList = (values: readonly string[]) =>
+  sql.raw(values.map((value) => `'${value}'`).join(", "))
+const tierList = sqlList(HTAG_TIERS)
+const billingTierList = sqlList(HTAG_BILLING_TIERS)
+const costSourceList = sqlList(HTAG_COST_SOURCES)
 
 /**
- * One row per HtAG API request (P1-1). The spend ledger behind D16's ~AUD $20
+ * One row per HtAG HTTP attempt — every page and every retry (P1-1, D63). The spend ledger behind D16's ~AUD $20
  * per-task budget: `AnalysisSteps.costAud` is summed from here (P1-4), and the
  * drawer's "Load supply detail" records against the task (P1-7).
  *
@@ -46,9 +50,21 @@ export const htagCalls = pgTable(
     /** Query params or body as sent. Never contains the API key. */
     requestJson: jsonb().$type<Record<string, unknown>>().notNull(),
     rowsReturned: integer().notNull().default(0),
+    /** The endpoint's value tier (spec `x-htg-pricingTier`), not the billing band. */
     tier: text().notNull(),
-    /** rows_returned × configured tier rate, AUD inc GST (Q13d). */
+    /**
+     * AUD inc GST. HtAG's `X-Billing-Cost` when present; rows × configured tier
+     * rate when a 2xx arrived without billing headers; 0 otherwise (D62).
+     */
     costAud: numeric({ precision: 10, scale: 4 }).notNull().default("0"),
+    /** Where `cost_aud` came from (D62). */
+    costSource: text().notNull().default("none"),
+    /** `X-Billing-Units`. Null when the response carried no billing headers. */
+    billedUnits: integer(),
+    /** `X-Billing-Balance`: the account balance after this request, AUD. */
+    billingBalanceAud: numeric({ precision: 12, scale: 4 }),
+    /** `X-Billing-Tier`: the volume band the last unit landed in (`free`, `tier1`…). */
+    billingTier: text(),
     /** HTTP status. Null when no response arrived (network error / timeout). */
     statusCode: integer(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -61,6 +77,15 @@ export const htagCalls = pgTable(
     check("htag_calls_tier_check", sql`${table.tier} in (${tierList})`),
     check("htag_calls_rows_returned_check", sql`${table.rowsReturned} >= 0`),
     check("htag_calls_cost_aud_check", sql`${table.costAud} >= 0`),
+    check("htag_calls_cost_source_check", sql`${table.costSource} in (${costSourceList})`),
+    check(
+      "htag_calls_billing_tier_check",
+      sql`${table.billingTier} is null or ${table.billingTier} in (${billingTierList})`,
+    ),
+    check(
+      "htag_calls_billed_units_check",
+      sql`${table.billedUnits} is null or ${table.billedUnits} >= 0`,
+    ),
   ],
 )
 

@@ -1,0 +1,47 @@
+{
+  "name": "trends-yield",
+  "synthetic": false,
+  "capturedAt": "2026-09-30T05:06:38Z",
+  "request": {
+    "method": "GET",
+    "path": "/markets/trends/yield",
+    "query": "level=suburb&area_id=ACT101&property_type=house&bedrooms=All&limit=3",
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "3",
+    "x-billing-units": "3",
+    "x-billing-tier": "free",
+    "x-billing-cost": "0",
+    "x-billing-balance": "25",
+    "x-billing-free-remaining": "19"
+  },
+  "body": {
+    "results": [
+      {
+        "area_id": "ACT101",
+        "period_end": "2026-08-31T00:00:00+00:00",
+        "property_type": "house",
+        "bedrooms": "All",
+        "yield_val": 0.0303
+      },
+      {
+        "area_id": "ACT101",
+        "period_end": "2026-07-31T00:00:00+00:00",
+        "property_type": "house",
+        "bedrooms": "All",
+        "yield_val": 0.0304
+      },
+      {
+        "area_id": "ACT101",
+        "period_end": "2026-06-30T00:00:00+00:00",
+        "property_type": "house",
+        "bedrooms": "All",
+        "yield_val": 0.0304
+      }
+    ],
+    "total": 3
+  }
+}

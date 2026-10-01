@@ -1,0 +1,42 @@
+{
+  "name": "summary",
+  "synthetic": false,
+  "capturedAt": "2026-09-30T05:06:37Z",
+  "request": {
+    "method": "GET",
+    "path": "/markets/summary",
+    "query": "level=suburb&area_id=ACT101&property_type=house&bedrooms=All&limit=2",
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "1",
+    "x-billing-units": "1",
+    "x-billing-tier": "free",
+    "x-billing-cost": "0",
+    "x-billing-balance": "25",
+    "x-billing-free-remaining": "21"
+  },
+  "body": {
+    "results": [
+      {
+        "area_id": "ACT101",
+        "period_end": "2026-08-31T00:00:00+00:00",
+        "property_type": "house",
+        "bedrooms": "All",
+        "typical_price": 1251579,
+        "rent": 730,
+        "gross_yield": 0.0303,
+        "sales": 1,
+        "annual_sales_volume": 48,
+        "rentals": 4,
+        "annual_rental_volume": 40,
+        "estimated_dwellings": 3704,
+        "adult_population": 5703,
+        "confidence": "Medium"
+      }
+    ],
+    "total": 1
+  }
+}

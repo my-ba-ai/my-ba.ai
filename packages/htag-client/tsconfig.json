@@ -1,0 +1,9 @@
+{
+  "extends": "@my-ba/config/tsconfig.lib.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+}

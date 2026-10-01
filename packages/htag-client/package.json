@@ -1,0 +1,35 @@
+{
+  "name": "@my-ba/htag-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "HtAG REST client (P1-1): fetch + Zod, no database dependency. Spend is reported through an injected HtagCallRecorder (D63).",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@my-ba/shared": "workspace:*",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@my-ba/config": "workspace:*",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

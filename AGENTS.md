@@ -149,7 +149,7 @@ it is rotated at the provider first.
 
 New providers get a custom rule in `.gitleaks.toml` in the ticket that brings
 them in, and only after the key format has been checked in the provider's
-dashboard or docs. Today only Clerk's publishable key has one; Clerk secret
+dashboard or docs. Today Clerk's publishable key and the HtAG API key (`sk-org-…`) have one; Clerk secret
 keys are already caught by the upstream `stripe-access-token` rule.
 
 ## Commands
@@ -211,7 +211,16 @@ LOCKED and Phase 1 is unblocked. P0-6 (Next.js shell) is implemented and
 awaiting verification. P0-7 is done: the CI `integration` job runs the P0-5
 durability suite and is a required check on `main`. P0-8 (gitleaks secret
 scanning in CI + pre-commit) is implemented and awaiting verification on
-GitHub. After that comes Phase 1.
+GitHub. Phase 1: P1-0 (HtAG schema delta) is done; P1-1 (HtAG REST client,
+`packages/htag-client`) is done. P1-8 (ranking) is next.
+
+HtAG calls go through `@my-ba/htag-client` only, and only from the API or
+worker: the key is server-side (T&C cl. 36) and `pnpm lint` fails if `apps/web`
+mentions `HTAG_API_KEY` or the package. Every client needs an
+`HtagCallRecorder` (D63) — in app code that is `createHtagCallRecorder(db, {
+tenantId, taskId, analysisStepId })` from `@my-ba/db`, never a no-op.
+`docs/htag/openapi.json` is the contract (D61); where captured fixtures disagree
+with it, the fixtures win and the divergence goes in the P1-1 ticket.
 
 Every web route is behind a session unless it is added to the public matcher in
 `apps/web/src/proxy.ts` (D58). API reads rely on RLS alone, with no explicit
