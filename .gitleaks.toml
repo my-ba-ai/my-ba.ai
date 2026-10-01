@@ -31,7 +31,7 @@ keywords = ["pk_test_", "pk_live_"]
 [[rules]]
 id = "htag-api-key"
 description = "HtAG API key"
-regex = '''\b(sk-org-[A-Za-z0-9_-]{60,100})(?:[\x60'"\s;,]|\\[nr]|$)'''
+regex = '''\b(sk-org-[A-Za-z0-9_-]{60,100})(?:[^A-Za-z0-9_-]|$)'''
 entropy = 3.5
 keywords = ["sk-org-"]
 

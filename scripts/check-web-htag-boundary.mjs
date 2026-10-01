@@ -20,8 +20,7 @@ function walk(dir) {
       readFileSync(path, "utf8")
         .split("\n")
         .forEach((line, index) => {
-          if (PATTERN.test(line))
-            offenders.push(`${relative(ROOT, path)}:${index + 1}: ${line.trim()}`)
+          if (PATTERN.test(line)) offenders.push(`${relative(ROOT, path)}:${index + 1}`)
         })
     }
   }

@@ -147,7 +147,18 @@ export async function send(ctx: HttpContext, request: HtagRequest): Promise<Htag
       throw new HtagNetworkError(request.path, error)
     }
 
-    const body = await readBody(response)
+    let body: unknown
+    try {
+      body = await readBody(response)
+    } catch (error) {
+      await record(ctx, { ...base, ...unbilled, statusCode: null })
+      if (retryable) {
+        await backoff(ctx, attempt)
+        return sendAttempt(attempt + 1)
+      }
+      throw new HtagNetworkError(request.path, error)
+    }
+
     const { status } = response
 
     if (status >= 200 && status < 300) {

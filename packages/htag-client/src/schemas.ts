@@ -27,8 +27,7 @@ const text = z
 
 /** `2026-08-31` or `2026-08-31T00:00:00+00:00` → `2026-08-31`. */
 export const periodEndSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}(?:[T ].*)?$/, "period_end must start with YYYY-MM-DD")
+  .union([z.iso.date(), z.iso.datetime({ offset: true })])
   .transform((value) => value.slice(0, 10))
 
 export const HTAG_BEDROOMS = ["All", "1", "2", "3", "4", "5"] as const
@@ -246,7 +245,7 @@ export type MarketQueryInput = z.input<typeof marketQueryInputSchema>
 
 /* ------------------------------------------------------ GET parameters */
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD")
+const isoDate = z.iso.date()
 
 const areaParams = {
   level: htagLevelSchema,
