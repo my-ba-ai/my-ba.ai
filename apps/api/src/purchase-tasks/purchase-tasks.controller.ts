@@ -1,9 +1,12 @@
-import { Controller, Get, Param } from "@nestjs/common"
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from "@nestjs/common"
 import {
   type AuthContext,
   type ListPurchaseTasksResponse,
   type PurchaseTaskDetail,
+  type SavePurchaseTaskRequest,
+  type ScreeningCostEstimate,
   purchaseTaskIdParamSchema,
+  savePurchaseTaskRequestSchema,
 } from "@my-ba/shared"
 import { CurrentUser } from "../auth/current-user.decorator"
 import { ZodValidationPipe } from "../common/zod-validation.pipe"
@@ -16,6 +19,30 @@ export class PurchaseTasksController {
   @Get()
   async list(@CurrentUser() auth: AuthContext): Promise<ListPurchaseTasksResponse> {
     return this.tasks.list(auth)
+  }
+
+  /** Declared before `:taskId` so the literal segment is not parsed as an id. */
+  @Get("screening-estimate")
+  screeningEstimate(): ScreeningCostEstimate {
+    return this.tasks.screeningEstimate()
+  }
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  async create(
+    @CurrentUser() auth: AuthContext,
+    @Body(new ZodValidationPipe(savePurchaseTaskRequestSchema)) body: SavePurchaseTaskRequest,
+  ): Promise<PurchaseTaskDetail> {
+    return this.tasks.create(auth, body)
+  }
+
+  @Patch(":taskId")
+  async update(
+    @CurrentUser() auth: AuthContext,
+    @Param("taskId", new ZodValidationPipe(purchaseTaskIdParamSchema)) taskId: string,
+    @Body(new ZodValidationPipe(savePurchaseTaskRequestSchema)) body: SavePurchaseTaskRequest,
+  ): Promise<PurchaseTaskDetail> {
+    return this.tasks.update(auth, taskId, body)
   }
 
   @Get(":taskId")

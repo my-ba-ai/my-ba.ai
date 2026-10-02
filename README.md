@@ -185,4 +185,12 @@ Phase 1 — HtAG Integration + Suburb Screener:
   below 50% coverage; `areaId` tie-break (D44, D67, D68). Q02 resolved: criteria
   are fixed fields (D66). `pnpm check` passes (2026-10-01).
 
-Next up: **P1-3** (criteria schema + form).
+- **P1-3 implemented, verification pending:** criteria schema and form. Fixed
+  criteria (D66) in `@my-ba/shared` with a partial draft variant; `POST` /
+  `PATCH /api/purchase-tasks` saving drafts (DRAFT-only edits, run-intent
+  validation) and a screening cost-ceiling endpoint; `compileToHtagLogic` in
+  `@my-ba/htag-client`; a three-step `/tasks/new` and `/tasks/[taskId]/edit`
+  form with preset prefill and customised flags (D69). HtAG probes confirmed
+  `irsad` is a decile and `price_3y_cagr` works in `logic` (Q16).
+
+Next up: verify **P1-3**, then **P1-10** (ABS tenure) or **P1-4** (screener).

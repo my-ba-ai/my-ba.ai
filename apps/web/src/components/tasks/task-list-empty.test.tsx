@@ -16,9 +16,9 @@ describe("TaskListEmpty", () => {
     ])
   })
 
-  it("says why the list is empty and when that changes", () => {
+  it("says why the list is empty and how to start", () => {
     render(<TaskListEmpty />)
     expect(screen.getByRole("heading", { name: "No purchase tasks yet" })).toBeDefined()
-    expect(screen.getByText(/Task creation arrives in\s+P1-3/)).toBeDefined()
+    expect(screen.getByText(/Start one with New\s+Purchase Task/)).toBeDefined()
   })
 })

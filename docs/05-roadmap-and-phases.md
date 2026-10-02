@@ -302,6 +302,19 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 
 **Dependencies:** P1-1 (types), P1-8. **Risk:** medium (unverified `state` field, vacancy units).
 
+**Implemented (2026-10-01).** Deltas from the description above (contract in D69):
+
+- **Where things live:** `criteriaSchema`, `criteriaShapeSchema`, `draftCriteriaSchema` and the save / estimate contracts in `@my-ba/shared` (`schemas/criteria.ts`, `schemas/criteria-api.ts`); `@my-ba/shared` now depends on `@my-ba/domain`. `AU_STATES` moved to `@my-ba/shared` (`@my-ba/db` re-exports it). `compileToHtagLogic`, `compileScreeningQuery` and `estimateScreeningCostCeiling` in `@my-ba/htag-client`.
+- **Criteria shape:** `{ states, propertyType, bedrooms: "All", filters, profile }`. Filters: `typicalPrice` and `grossYieldPct` ranges, `maxVacancyRatePct`, `maxStockOnMarketPct`, `maxDaysOnMarket`, `maxPriceGrowth36mPct` (D68), `minAnnualSalesVolume`, `minIrsadDecile`, `highConfidenceOnly` (default on). Only enabled filters are stored. `bedrooms` is HtAG's aggregate only (D40). One property type per task (multi-value `property_type` is unverified, P1-1).
+- **Run rule:** at least one state and at least three filters (design brief), enforced by `criteriaSchema`; the compiler accepts `criteriaShapeSchema`, so all-filters-off still compiles (AC 2).
+- **API:** `POST /api/purchase-tasks`, `PATCH /api/purchase-tasks/:taskId` (DRAFT and unlocked only, else 409), body `{ intent: "draft" | "run", name, criteria }`; `GET /api/purchase-tasks/screening-estimate`. Detail responses carry typed `DraftCriteria`. `run` validates and saves but leaves `DRAFT` (P1-6 transitions).
+- **Web:** `/tasks/new`, `/tasks/[taskId]/edit`, a three-step form (`components/tasks/criteria-form/`) with RHF + Zod, Server Action `saveTask` (`app/(app)/tasks/actions.ts`). "+ New Purchase Task" is live; draft detail pages get "Edit criteria". "Create Task & Run Screening" is disabled with a P1-6 tooltip; the review step lists what blocks a run. AC 7: the form takes `initialValues` (`draftToFormValues`).
+- **Customised flags (AC 3):** diff-based against the preset, not "touched"; typical price never counts (it isn't preset-prefilled). Switching preset with either flag set opens a confirm dialog; the price band, name and states are kept.
+- **Cost ceiling:** default shape AUD $26.30, above D16's ~$20; accepted as the first-run worst case (Q22 resolved). Shown with an over-budget note.
+- **AC 4 / AC 5:** `state` and vacancy units were settled in Q16 (2026-09-30). Two new pre-merge probes replaced them, run 2026-10-01 at $0 (`scripts/htag/probe-p1-3.sh`): `irsad` is a decile and `price_3y_cagr` is accepted in `logic`, so both compile as built (Q16).
+- **Tests:** `@my-ba/shared` `criteria.spec.ts` (AC 1, AC 6) and `purchase-task.spec.ts`; `@my-ba/htag-client` `compile-criteria.spec.ts` (AC 2, with a snapshot) and `screening-estimate.spec.ts`; `apps/api` service and HTTP controller specs (create, update 404/409, run 400 on partial, estimate route ordering); `apps/web` `lib/criteria-form.test.ts` (AC 3, AC 6, AC 7) and `criteria-form/task-criteria-form.test.tsx` (preset confirm, save draft).
+- **Pre-verification run (Claude, 2026-10-01):** `tsc` clean for `@my-ba/domain`, `@my-ba/shared`, `@my-ba/db`, `@my-ba/htag-client` (src + specs), `apps/api` and `apps/web` (with route types hand-extended for the two new routes, since `next typegen` needs SWC). Under Node's test runner with a Vitest shim: shared 38/38, htag-client compile + estimate 11/11, API purchase-tasks 20/20, web `criteria-form` lib 14/14. Not run here: the web component test (jsdom + React), the compile snapshot (written on first run), oxlint and oxfmt. Tailwind canonical check and the web/htag boundary check pass. Needs `pnpm install` (new workspace deps).
+
 ### P1-4 — Suburb Screener node
 
 **Description:** LangGraph node. Steps:

@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@my-ba/config": "workspace:*",
+    "@my-ba/domain": "workspace:*",
     "@types/node": "^22.10.0",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"

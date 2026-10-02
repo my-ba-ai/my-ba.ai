@@ -73,6 +73,9 @@ const identityCacheProvider: Provider = {
     IdentityResolverService,
     AuthService,
     // Global. Every route is protected unless it carries @Public().
+    // [Context] Registering a global guard using `useGlobalGuards()` outside of a module
+    // cannot inject dependencies into the guard. By providing it here, NestJS ensures
+    // that the guard can have its dependencies injected properly.
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
   exports: [IdentityResolverService],

@@ -2,6 +2,7 @@ import { listPurchaseTasksResponseSchema } from "@my-ba/shared"
 import type { Metadata } from "next"
 import { ApiFailurePanel } from "@/components/api-failure-panel"
 import { PageHeader } from "@/components/shell/page-header"
+import { PageTransition } from "@/components/shell/page-transition"
 import { NewTaskButton } from "@/components/tasks/new-task-button"
 import { TaskCard } from "@/components/tasks/task-card"
 import { TaskListEmpty } from "@/components/tasks/task-list-empty"
@@ -31,7 +32,7 @@ export default async function TasksPage() {
   const result = await loadTasks()
 
   return (
-    <>
+    <PageTransition>
       <PageHeader title="Purchase tasks" actions={<NewTaskButton />} />
       {!result.ok ? (
         <ApiFailurePanel failure={result.failure} what="purchase tasks" />
@@ -46,6 +47,6 @@ export default async function TasksPage() {
           ))}
         </ul>
       )}
-    </>
+    </PageTransition>
   )
 }

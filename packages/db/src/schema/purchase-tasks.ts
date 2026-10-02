@@ -1,5 +1,6 @@
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import type { DraftCriteria } from "@my-ba/shared"
 import { taskStatus } from "./enums"
 import { tenants } from "./tenants"
 import { users } from "./users"
@@ -7,12 +8,11 @@ import { users } from "./users"
 /**
  * The aggregate root (D02). Everything else in the domain hangs off a task id.
  *
- * `criteria` is jsonb rather than columns because Q02 is still open — if
- * criteria end up natural-language-parsed, the shape changes; if they stay
- * fixed structured fields (the leaning), the Zod schema in `@my-ba/shared`
- * becomes the contract and this column is validated on the way in and out.
- * Either way the database should not be the thing that has to migrate while
- * that question is open.
+ * `criteria` is jsonb holding `DraftCriteria` (`@my-ba/shared`, P1-3, D66).
+ * Q02 settled on fixed fields, but they stay jsonb: drafts are partial, the
+ * shape is versioned by the Zod schema rather than by migrations, and the API
+ * parses it on the way in and out. A draft may be partial; whether it can run
+ * is `criteriaSchema.safeParse(criteria).success`.
  */
 export const purchaseTasks = pgTable(
   "purchase_tasks",
@@ -26,7 +26,7 @@ export const purchaseTasks = pgTable(
       .references(() => users.id, { onDelete: "restrict" }),
     name: text().notNull(),
     status: taskStatus().notNull().default("DRAFT"),
-    criteria: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    criteria: jsonb().$type<DraftCriteria>().notNull().default({}),
 
     /** Set on transition to CONTACT_AGENT. Non-null means immutable (D04). */
     lockedAt: timestamp({ withTimezone: true }),

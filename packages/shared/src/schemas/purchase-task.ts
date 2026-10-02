@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { taskStatusSchema } from "../domain/task-status"
+import { draftCriteriaSchema } from "./criteria"
 
 /**
  * `:taskId` route parameter. Validated before it reaches a query so a malformed
@@ -12,9 +13,9 @@ export const purchaseTaskIdParamSchema = z.uuid()
  * the API serialises `Date`s explicitly rather than trusting `JSON.stringify`,
  * so the contract is the same in both directions.
  *
- * Deliberately absent: shortlist count and criteria summary. Both need data
- * that does not exist until screening (P1-4) and the criteria schema (P1-3)
- * land; adding them now would mean inventing a shape Q02 has not settled.
+ * Deliberately absent: shortlist count and criteria summary. The shortlist
+ * needs screening (P1-4); the summary card is part of the task-list fidelity
+ * work deferred to P1 polish.
  */
 export const purchaseTaskSummarySchema = z.object({
   id: z.uuid(),
@@ -30,11 +31,13 @@ export const purchaseTaskSummarySchema = z.object({
 export type PurchaseTaskSummary = z.infer<typeof purchaseTaskSummarySchema>
 
 /**
- * `GET /api/purchase-tasks/:taskId`. `criteria` stays an opaque record while
- * Q02 is open — P1-3 replaces it with the real criteria schema.
+ * `GET /api/purchase-tasks/:taskId`, and the response to create / update
+ * (P1-3). `criteria` is whatever was saved: a draft may be partial, so it
+ * parses as `draftCriteriaSchema` (full criteria are a subset of it). Whether
+ * it is runnable is `criteriaSchema.safeParse(criteria).success`.
  */
 export const purchaseTaskDetailSchema = purchaseTaskSummarySchema.extend({
-  criteria: z.record(z.string(), z.unknown()),
+  criteria: draftCriteriaSchema,
 })
 
 export type PurchaseTaskDetail = z.infer<typeof purchaseTaskDetailSchema>

@@ -125,6 +125,13 @@ Minimum text size 10px, and only for uppercase data labels. Body never below 12.
 
 `pulse` 1.6–1.8s on live/next indicators · `shim` 1.25s skeleton shimmer · `drift` 14s ambient background glow · `slidein` .22s drawer · 160–180ms ease on hover states. Nothing else animates.
 
+**View transitions (D71).** Navigation and step changes, via React `<ViewTransition>`:
+
+- **Directional page slide:** 24px. The old page fades out over 120ms, then the new one fades in over 180ms; both slide over 220ms. Forward (deeper: list → task → edit) slides left; back (breadcrumb ancestors) slides right. The shell (sidebar, mobile bar) never moves.
+- **Shared element:** a task's title morphs from its list card into the detail heading over 220ms, with a 3px mid-flight blur.
+- **Same-place crossfade:** 180ms, between the criteria form's steps.
+- **Reduced motion:** with `prefers-reduced-motion: reduce`, durations drop to 0 and content swaps instantly.
+
 ---
 
 ## 6. Voice

@@ -146,10 +146,8 @@ export type ConfidenceFloor = (typeof CONFIDENCE_FLOORS)[number]
  * (P1-3) converts them to HtAG's fractions. An absent key means "filter off".
  *
  * - `maxPriceGrowth36mPct` is cumulative growth over 36 months (50 = +50%).
- *   P1-3 compiles it to a 3-year CAGR (1.5^(1/3) − 1 ≈ 14.47%/yr); whether
- *   HtAG accepts `price_3y_cagr` in `logic` is probed before P1-3 merges.
- * - `minIrsadDecile` follows the roadmap's wording; HtAG `irsad` units are
- *   confirmed in P1-3 before it is compiled.
+ *   P1-3 compiles it to HtAG's `price_3y_cagr` (1.5^(1/3) − 1 ≈ 14.47%/yr).
+ * - `minIrsadDecile`: HtAG `irsad` is a decile, 1–10 (Q16).
  */
 export interface PresetFilterDefaults {
   minGrossYieldPct?: number

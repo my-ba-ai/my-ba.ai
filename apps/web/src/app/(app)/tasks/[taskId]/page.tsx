@@ -1,15 +1,18 @@
-import { purchaseTaskDetailSchema, purchaseTaskIdParamSchema } from "@my-ba/shared"
-import { ChevronRight } from "lucide-react"
-import Link from "next/link"
-import { notFound } from "next/navigation"
 import { ApiFailurePanel } from "@/components/api-failure-panel"
 import { PageHeader } from "@/components/shell/page-header"
+import { PageTransition } from "@/components/shell/page-transition"
 import { LockedChip } from "@/components/tasks/locked-chip"
 import { StageStepper } from "@/components/tasks/stage-stepper"
-import { StatusPill } from "@/components/tasks/status-pill"
+import { Button } from "@/components/ui/button"
 import { ApiError, apiFetch } from "@/lib/api-client"
 import { classifyApiError } from "@/lib/api-failure"
+import { breadcrumbs } from "@/lib/breadcrumbs"
 import { formatDateTime } from "@/lib/format"
+import { NAV_BACK, NAV_FORWARD, taskTitleTransitionName } from "@/lib/view-transitions"
+import { purchaseTaskDetailSchema, purchaseTaskIdParamSchema } from "@my-ba/shared"
+import { Pencil } from "lucide-react"
+import Link from "next/link"
+import { notFound } from "next/navigation"
 
 async function loadTask(taskId: string) {
   try {
@@ -23,18 +26,6 @@ async function loadTask(taskId: string) {
     return { ok: false as const, failure }
   }
 }
-
-const breadcrumb = (current: string) => (
-  <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-body-sm text-ink-muted">
-    <Link href="/tasks" className="hover:text-accent-deep">
-      Tasks
-    </Link>
-    <ChevronRight aria-hidden className="size-3.5" />
-    <span aria-current="page" className="truncate text-ink-3">
-      {current}
-    </span>
-  </nav>
-)
 
 /**
  * Placeholder task detail (P0-6). Proves routing, the tenant-scoped read and the
@@ -51,30 +42,45 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[task
 
   if (!result.ok) {
     return (
-      <>
-        <PageHeader title="Purchase task" eyebrow={breadcrumb("Task")} />
+      <PageTransition>
+        <PageHeader title="Purchase task" breadcrumbs={breadcrumbs.taskUnavailable()} />
         <ApiFailurePanel failure={result.failure} what="this task" />
-      </>
+      </PageTransition>
     )
   }
 
   const { task } = result
   return (
-    <>
+    <PageTransition>
       <PageHeader
         title={task.name}
-        eyebrow={breadcrumb(task.name)}
+        titleTransitionName={taskTitleTransitionName(task.id)}
+        breadcrumbs={breadcrumbs.task(task)}
         actions={
           <>
             {task.lockedAt ? <LockedChip /> : null}
-            <StatusPill status={task.status} />
+            <Button
+              variant="outline"
+              render={<Link href={`/tasks`} transitionTypes={NAV_BACK} />}
+              nativeButton={false}
+            >
+              Back to Tasks
+            </Button>
+            {task.status === "DRAFT" && !task.lockedAt ? (
+              <Button
+                variant="default"
+                render={<Link href={`/tasks/${task.id}/edit`} transitionTypes={NAV_FORWARD} />}
+                nativeButton={false}
+              >
+                <Pencil aria-hidden />
+                Edit criteria
+              </Button>
+            ) : null}
           </>
         }
       />
-
-      <section className="space-y-6 rounded-2xl border border-border-panel bg-surface p-6 shadow-panel">
+      <section className="space-y-10 rounded-2xl border border-border-panel bg-surface p-6 shadow-panel">
         <StageStepper status={task.status} variant="full" />
-
         <dl className="grid gap-3 sm:grid-cols-3">
           {[
             { label: "Created", value: formatDateTime(task.createdAt), iso: task.createdAt },
@@ -102,6 +108,6 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[task
           shows only where the task is in the pipeline.
         </p>
       </section>
-    </>
+    </PageTransition>
   )
 }

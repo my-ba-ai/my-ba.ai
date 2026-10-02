@@ -1,8 +1,8 @@
 "use client"
 
-import * as React from "react"
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
 import { cn } from "cn"
+import * as React from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -11,7 +11,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import { ChevronDownIcon, XIcon, CheckIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
 
 const Combobox = ComboboxPrimitive.Root
 
@@ -218,7 +218,7 @@ function ComboboxChip({
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
       className={cn(
-        "flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 rounded-sm bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pr-0",
+        "flex h-[calc(--spacing(5.5))] w-fit items-center justify-center gap-1 rounded-sm bg-primary px-2 text-xs font-medium whitespace-nowrap text-primary-foreground has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pr-0",
         className,
       )}
       {...props}
@@ -226,7 +226,7 @@ function ComboboxChip({
       {children}
       {showRemove && (
         <ComboboxPrimitive.ChipRemove
-          render={<Button variant="ghost" size="icon-xs" />}
+          render={<Button variant="ghost" size="icon-sm" />}
           className="-ml-1 opacity-50 hover:opacity-100"
           data-slot="combobox-chip-remove"
         >
@@ -253,18 +253,18 @@ function useComboboxAnchor() {
 
 export {
   Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxGroup,
-  ComboboxLabel,
-  ComboboxCollection,
-  ComboboxEmpty,
-  ComboboxSeparator,
-  ComboboxChips,
   ComboboxChip,
+  ComboboxChips,
   ComboboxChipsInput,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+  ComboboxSeparator,
   ComboboxTrigger,
   ComboboxValue,
   useComboboxAnchor,

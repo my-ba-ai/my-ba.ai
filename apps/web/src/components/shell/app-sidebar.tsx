@@ -5,7 +5,11 @@ import { SidebarNav } from "./sidebar-nav"
 
 export function AppSidebar() {
   return (
-    <aside className="flex h-dvh w-60 shrink-0 flex-col border-r border-border-panel bg-surface-sunk px-3 py-5 max-md:hidden">
+    <aside
+      // Anchored during page slides (D71): the content moves, the shell doesn't.
+      style={{ viewTransitionName: "app-sidebar" }}
+      className="flex h-dvh w-60 shrink-0 flex-col border-r border-border-panel bg-surface-sunk px-3 py-5 max-md:hidden"
+    >
       <Link href="/tasks" className="mb-7 flex items-center gap-2 px-3">
         {/* The one identity mark allowed the accent gradient (design-system.md §1). */}
         <span aria-hidden className="size-5 rounded-[6px] bg-(image:--accent-grad)" />
