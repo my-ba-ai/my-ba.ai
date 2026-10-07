@@ -9,7 +9,7 @@ import { draftToFormValues } from "@/lib/criteria-form"
 import { loadScreeningEstimate } from "@/lib/screening-estimate"
 import { purchaseTaskDetailSchema, purchaseTaskIdParamSchema } from "@my-ba/shared"
 import type { Metadata } from "next"
-import { notFound, redirect } from "next/navigation"
+import { notFound, redirect, unstable_rethrow } from "next/navigation"
 
 export const metadata: Metadata = { title: "Edit purchase task" }
 
@@ -26,6 +26,9 @@ export default async function EditTaskPage({ params }: PageProps<"/tasks/[taskId
   try {
     task = await apiFetch(`/purchase-tasks/${taskId}`, purchaseTaskDetailSchema)
   } catch (error: unknown) {
+    // Next's own control-flow errors (dynamic-usage bailout during prerender,
+    // notFound, redirect) must reach Next, not be logged as API failures.
+    unstable_rethrow(error)
     if (error instanceof ApiError && error.status === 404) notFound()
     const failure = classifyApiError(error)
     console.error(`[tasks] edit ${taskId} failed at stage "${failure.stage}":`, error)

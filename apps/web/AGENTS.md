@@ -162,6 +162,12 @@ React.ComponentProps<"button"> { … }` or `extends SliderPrimitive.Root.Props`.
     a plain `setState` swaps instantly.
   - **Motion limits:** stay within design-system §5. Durations are ≤ 220ms, and
     `prefers-reduced-motion` is already handled in `globals.css`.
+- **A `catch` around server-side code calls `unstable_rethrow(error)` first**
+  (`next/navigation`). Next uses thrown errors for control flow: the
+  dynamic-usage bailout when `apiFetch` calls `auth()` during `next build`, plus
+  `notFound()` and `redirect()`. A `catch` that swallows them turns a dynamic
+  page into a prerendered error state. `pnpm build` prints
+  `DYNAMIC_SERVER_USAGE` when that happens.
 - Light mode only. Don't add `dark:` classes or a theme provider.
 - `/dev/ui` is the component gallery and the D52 spike. It 404s in production.
 - Tests are Vitest + Testing Library, jsdom environment, named `*.test.tsx`

@@ -1,7 +1,7 @@
+import { type CriteriaFormValues, applyPreset, emptyFormValues } from "@/lib/criteria-form"
+import type { SavePurchaseTaskRequestInput } from "@my-ba/shared"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { SavePurchaseTaskRequestInput } from "@my-ba/shared"
-import { type CriteriaFormValues, applyPreset, emptyFormValues } from "@/lib/criteria-form"
 import { TaskCriteriaForm } from "./task-criteria-form"
 
 const saveTask = vi.fn(async (_taskId: string | null, _input: SavePurchaseTaskRequestInput) => ({
@@ -67,7 +67,7 @@ describe("TaskCriteriaForm — Save as Draft (P1-3 AC 6)", () => {
   it("does not save without a name", async () => {
     renderForm({ ...emptyFormValues() })
     fireEvent.click(screen.getByRole("button", { name: "Save as Draft" }))
-    expect(await screen.findByText("Name the task")).toBeDefined()
+    expect(await screen.findByText("Purchase task name is required")).toBeDefined()
     expect(saveTask).not.toHaveBeenCalled()
   })
 })
@@ -83,7 +83,7 @@ describe("TaskCriteriaForm — steps as tabs", () => {
   it("moves forward only when the steps being left are valid", async () => {
     renderForm({ ...emptyFormValues() })
     fireEvent.click(screen.getByRole("tab", { name: "Criteria" }))
-    expect(await screen.findByText("Name the task")).toBeDefined()
+    expect(await screen.findByText("Purchase task name is required")).toBeDefined()
     expect(screen.getByRole("tab", { name: "Strategy & risk" }).getAttribute("aria-selected")).toBe(
       "true",
     )

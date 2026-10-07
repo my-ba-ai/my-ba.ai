@@ -6,7 +6,7 @@ import {
   savePurchaseTaskRequestSchema,
   type SavePurchaseTaskRequestInput,
 } from "@my-ba/shared"
-import { redirect } from "next/navigation"
+import { redirect, unstable_rethrow } from "next/navigation"
 import { ApiError, apiFetch } from "@/lib/api-client"
 import { API_FAILURE_SUMMARY, classifyApiError } from "@/lib/api-failure"
 
@@ -75,6 +75,9 @@ export async function saveTask(
     )
     savedId = task.id
   } catch (error: unknown) {
+    // Next's own control-flow errors (dynamic-usage bailout during prerender,
+    // notFound, redirect) must reach Next, not be logged as API failures.
+    unstable_rethrow(error)
     if (error instanceof ApiError) {
       if (error.status === 400) {
         return failure("The API rejected some values.", issuesFrom(error.body))

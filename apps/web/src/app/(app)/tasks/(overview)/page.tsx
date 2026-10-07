@@ -8,6 +8,7 @@ import { TaskCard } from "@/components/tasks/task-card"
 import { TaskListEmpty } from "@/components/tasks/task-list-empty"
 import { apiFetch } from "@/lib/api-client"
 import { classifyApiError } from "@/lib/api-failure"
+import { unstable_rethrow } from "next/navigation"
 
 export const metadata: Metadata = { title: "Purchase tasks" }
 
@@ -16,6 +17,9 @@ async function loadTasks() {
     const { items } = await apiFetch("/purchase-tasks", listPurchaseTasksResponseSchema)
     return { ok: true as const, items }
   } catch (error: unknown) {
+    // Next's own control-flow errors (dynamic-usage bailout during prerender,
+    // notFound, redirect) must reach Next, not be logged as API failures.
+    unstable_rethrow(error)
     const failure = classifyApiError(error)
     // Full detail server-side; the panel shows the one-line version.
     console.error(`[tasks] list failed at stage "${failure.stage}":`, error)

@@ -12,13 +12,16 @@ import { NAV_BACK, NAV_FORWARD, taskTitleTransitionName } from "@/lib/view-trans
 import { purchaseTaskDetailSchema, purchaseTaskIdParamSchema } from "@my-ba/shared"
 import { Pencil } from "lucide-react"
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, unstable_rethrow } from "next/navigation"
 
 async function loadTask(taskId: string) {
   try {
     const task = await apiFetch(`/purchase-tasks/${taskId}`, purchaseTaskDetailSchema)
     return { ok: true as const, task }
   } catch (error: unknown) {
+    // Next's own control-flow errors (dynamic-usage bailout during prerender,
+    // notFound, redirect) must reach Next, not be logged as API failures.
+    unstable_rethrow(error)
     // Missing and other-tenant are both 404 from the API, by design.
     if (error instanceof ApiError && error.status === 404) notFound()
     const failure = classifyApiError(error)
