@@ -19,8 +19,7 @@ export function AppSidebar() {
       <SidebarNav />
 
       <div className="mt-auto flex items-center gap-2.5 border-t border-border-soft px-3 pt-4">
-        <UserButton />
-        <span className="text-body-sm text-ink-muted">Account</span>
+        <UserButton showName />
       </div>
     </aside>
   )

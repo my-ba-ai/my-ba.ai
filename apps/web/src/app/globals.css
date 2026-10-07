@@ -152,8 +152,8 @@
   --color-primary: var(--accent);
   --color-primary-foreground: #ffffff;
 
-  --color-secondary: var(--surface);
-  --color-secondary-foreground: var(--ink-3);
+  --color-secondary: var(--accent-alt);
+  --color-secondary-foreground: #ffffff;
 
   --color-muted: var(--surface-sunk);
   --color-muted-foreground: var(--ink-muted);

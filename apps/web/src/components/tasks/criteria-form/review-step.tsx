@@ -1,8 +1,5 @@
 "use client"
 
-import { FACTOR_IDS } from "@my-ba/domain"
-import type { ScreeningCostEstimate } from "@my-ba/shared"
-import { useFormContext, useWatch } from "react-hook-form"
 import { Badge } from "@/components/ui/badge"
 import {
   type CriteriaFormValues,
@@ -14,6 +11,9 @@ import {
   runBlockers,
   weightsCustomised,
 } from "@/lib/criteria-form"
+import { FACTOR_IDS } from "@my-ba/domain"
+import type { ScreeningCostEstimate } from "@my-ba/shared"
+import { useFormContext, useWatch } from "react-hook-form"
 import { enabledFilterSummaries, formatAudCents, normalisedPercents } from "./criteria-format"
 
 function Row({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
@@ -75,10 +75,10 @@ export function ReviewStep({ estimate }: Readonly<{ estimate: ScreeningCostEstim
     <div className="flex flex-col gap-6">
       <dl className="space-y-3 rounded-xl border border-border-card bg-surface px-5 py-4">
         <Row label="Name">{values.name || <span className="text-ink-muted">Not set</span>}</Row>
-        <Row label="Preset">
+        <Row label="Strategy">
           {values.strategy && values.risk ? (
             <span className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">
+              <Badge variant="default">
                 {STRATEGY_LABELS[values.strategy].label} × {RISK_LABELS[values.risk].label}
               </Badge>
               {filtersCustomised(values) ? <Badge variant="outline">Filters custom</Badge> : null}

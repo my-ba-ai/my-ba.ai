@@ -136,22 +136,18 @@ export function TaskCriteriaForm({ taskId, initialValues, estimate }: Readonly<P
               value={index}
               className="rounded-2xl border border-border-panel bg-surface p-6 shadow-panel"
             >
-              {/* Same place, different content: crossfade (D71). Base UI mounts
-                  only the active panel, so the name is unique at any moment. */}
-              <ViewTransition name={`criteria-step-${index}`} share="step-fade" default="none">
-                <div>
-                  <h2 className="mb-5 text-section text-ink">{s.title}</h2>
-                  <Activity mode={index === 0 ? "visible" : "hidden"}>
-                    <StrategyStep onPresetChange={onPresetChange} />
-                  </Activity>
-                  <Activity mode={index === 1 ? "visible" : "hidden"}>
-                    <CriteriaStep />
-                  </Activity>
-                  <Activity mode={index === 2 ? "visible" : "hidden"}>
-                    <ReviewStep estimate={estimate} />
-                  </Activity>
-                </div>
-              </ViewTransition>
+              {/* Same place, different content: crossfade (D71). Unnamed, so there is
+                  no name to collide on; Activity hiding/showing is the exit/enter. */}
+              <Activity mode={index === step ? "visible" : "hidden"}>
+                <ViewTransition enter="step-fade" exit="step-fade" default="none">
+                  <div>
+                    <h2 className="mb-5 text-section text-ink">{s.title}</h2>
+                    {index === 0 ? <StrategyStep onPresetChange={onPresetChange} /> : null}
+                    {index === 1 ? <CriteriaStep /> : null}
+                    {index === 2 ? <ReviewStep estimate={estimate} /> : null}
+                  </div>
+                </ViewTransition>
+              </Activity>
             </TabsContent>
           ))}
         </Tabs>

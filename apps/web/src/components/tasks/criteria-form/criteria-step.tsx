@@ -173,7 +173,7 @@ export function CriteriaStep() {
       <div className="flex flex-wrap items-center gap-2 text-body-sm text-ink-muted">
         {preset ? (
           <>
-            Prefilled from <Badge>{preset}</Badge>
+            Prefilled based on strategy <Badge>{preset}</Badge>
             {filtersCustomised(values) ? <Badge variant="outline">Filters customised</Badge> : null}
             {weightsCustomised(values) ? <Badge variant="outline">Weights customised</Badge> : null}
           </>

@@ -196,7 +196,11 @@ const isSet = (n: number | undefined): n is number => n !== undefined && !Number
 
 export const criteriaFormSchema = z
   .object({
-    name: z.string().trim().min(1, "Name the task").max(120, "Keep the name under 120 characters"),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Purchase task name is required")
+      .max(120, "Keep the name under 120 characters"),
     strategy: strategySchema.nullable(),
     risk: riskToleranceSchema.nullable(),
     states: z.array(auStateSchema),

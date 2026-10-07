@@ -91,7 +91,10 @@ export function StrategyStep({
 }>) {
   const form = useFormContext<CriteriaFormValues>()
   const { errors } = form.formState
-  const [strategy, risk] = useWatch({ control: form.control, name: ["strategy", "risk"] })
+  const [name, strategy, risk] = useWatch({
+    control: form.control,
+    name: ["name", "strategy", "risk"],
+  })
   const anchor = useComboboxAnchor()
 
   return (
@@ -104,28 +107,35 @@ export function StrategyStep({
           placeholder="e.g. Brisbane cashflow, under $750k"
           aria-invalid={!!errors.name}
           {...form.register("name")}
+          // Use the controlled value from useWatch to keep the input
+          // in sync with the form state while the page is reloading
+          value={name}
         />
         <FieldError errors={[errors.name]} />
       </Field>
 
-      <ChoiceCards<Strategy>
-        name="strategy"
-        legend="Strategy"
-        description="Sets the ranking weights, and a yield floor for cashflow and balanced."
-        options={STRATEGIES}
-        labels={STRATEGY_LABELS}
-        value={strategy}
-        onChange={(next) => onPresetChange(next, risk)}
-      />
-
-      <ChoiceCards<RiskTolerance>
-        name="risk"
-        legend="Risk tolerance"
-        description="Sets the supply and data-quality limits in the next step."
-        options={RISK_TOLERANCES}
-        labels={RISK_LABELS}
-        value={risk}
-        onChange={(next) => onPresetChange(strategy, next)}
+      <Controller
+        control={form.control}
+        name="propertyType"
+        render={({ field }) => (
+          <FieldSet>
+            <FieldLegend variant="label">Property type</FieldLegend>
+            <RadioGroup
+              value={field.value ?? ""}
+              onValueChange={(next) => field.onChange(next)}
+              className="flex gap-6 cursor-pointer"
+            >
+              {HTAG_PROPERTY_TYPES.map((type) => (
+                <Field key={type} orientation="horizontal" className="w-auto">
+                  <RadioGroupItem value={type} id={`property-type-${type}`} />
+                  <FieldLabel htmlFor={`property-type-${type}`} className="font-normal">
+                    {PROPERTY_TYPE_LABELS[type]}
+                  </FieldLabel>
+                </Field>
+              ))}
+            </RadioGroup>
+          </FieldSet>
+        )}
       />
 
       <Controller
@@ -176,28 +186,24 @@ export function StrategyStep({
         )}
       />
 
-      <Controller
-        control={form.control}
-        name="propertyType"
-        render={({ field }) => (
-          <FieldSet>
-            <FieldLegend variant="label">Property type</FieldLegend>
-            <RadioGroup
-              value={field.value ?? ""}
-              onValueChange={(next) => field.onChange(next)}
-              className="flex gap-6"
-            >
-              {HTAG_PROPERTY_TYPES.map((type) => (
-                <Field key={type} orientation="horizontal" className="w-auto">
-                  <RadioGroupItem value={type} id={`property-type-${type}`} />
-                  <FieldLabel htmlFor={`property-type-${type}`} className="font-normal">
-                    {PROPERTY_TYPE_LABELS[type]}
-                  </FieldLabel>
-                </Field>
-              ))}
-            </RadioGroup>
-          </FieldSet>
-        )}
+      <ChoiceCards<Strategy>
+        name="strategy"
+        legend="Strategy"
+        description="Sets the ranking weights, and a yield floor for cashflow and balanced."
+        options={STRATEGIES}
+        labels={STRATEGY_LABELS}
+        value={strategy}
+        onChange={(next) => onPresetChange(next, risk)}
+      />
+
+      <ChoiceCards<RiskTolerance>
+        name="risk"
+        legend="Risk tolerance"
+        description="Sets the supply and data-quality limits in the next step."
+        options={RISK_TOLERANCES}
+        labels={RISK_LABELS}
+        value={risk}
+        onChange={(next) => onPresetChange(strategy, next)}
       />
     </FieldGroup>
   )
