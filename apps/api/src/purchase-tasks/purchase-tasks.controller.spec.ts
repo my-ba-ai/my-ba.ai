@@ -31,7 +31,17 @@ describe("PurchaseTasksController (HTTP)", () => {
   const service = {
     list: vi.fn(async () => ({ items: [] })),
     get: vi.fn(async () => ({})),
+    create: vi.fn(async () => ({ id: "created" })),
+    update: vi.fn(async () => ({ id: "updated" })),
+    screeningEstimate: vi.fn(() => ({ ceilingAud: 1, budgetAud: 20, lines: [] })),
   }
+  const ID = "aaaaaaaa-2222-4333-8444-555555555555"
+  const send = (method: string, path: string, body: unknown) =>
+    fetch(`${base}${path}`, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    })
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -76,5 +86,43 @@ describe("PurchaseTasksController (HTTP)", () => {
     const id = "aaaaaaaa-2222-4333-8444-555555555555"
     await fetch(`${base}/purchase-tasks/${id}`)
     expect(service.get).toHaveBeenCalledWith(AUTH, id)
+  })
+
+  it("GET /purchase-tasks/screening-estimate is routed to the estimate, not parsed as an id", async () => {
+    service.get.mockClear()
+    const response = await fetch(`${base}/purchase-tasks/screening-estimate`)
+    expect(response.status).toBe(200)
+    expect(service.screeningEstimate).toHaveBeenCalled()
+    expect(service.get).not.toHaveBeenCalled()
+  })
+
+  it("POST /purchase-tasks saves a partial draft (P1-3 AC 6)", async () => {
+    const body = { intent: "draft", name: "QLD cashflow", criteria: { states: ["QLD"] } }
+    const response = await send("POST", "/purchase-tasks", body)
+    expect(response.status).toBe(201)
+    expect(service.create).toHaveBeenCalledWith(AUTH, body)
+  })
+
+  it("POST /purchase-tasks with intent run rejects partial criteria with 400 (P1-3 AC 6)", async () => {
+    service.create.mockClear()
+    const body = { intent: "run", name: "QLD cashflow", criteria: { states: ["QLD"] } }
+    const response = await send("POST", "/purchase-tasks", body)
+    expect(response.status).toBe(400)
+    expect(service.create).not.toHaveBeenCalled()
+  })
+
+  it("POST /purchase-tasks rejects unknown criteria keys even for a draft", async () => {
+    service.create.mockClear()
+    const body = { intent: "draft", name: "x", criteria: { demandSupplyMin: 55 } }
+    expect((await send("POST", "/purchase-tasks", body)).status).toBe(400)
+    expect(service.create).not.toHaveBeenCalled()
+  })
+
+  it("PATCH /purchase-tasks/:taskId validates the id and body, then forwards", async () => {
+    const body = { intent: "draft", name: "Renamed", criteria: {} }
+    expect((await send("PATCH", "/purchase-tasks/not-a-uuid", body)).status).toBe(400)
+    const response = await send("PATCH", `/purchase-tasks/${ID}`, body)
+    expect(response.status).toBe(200)
+    expect(service.update).toHaveBeenCalledWith(AUTH, ID, body)
   })
 })

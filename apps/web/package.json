@@ -16,6 +16,7 @@
     "@base-ui/react": "^1.8.0",
     "@clerk/nextjs": "^6.0.0",
     "@hookform/resolvers": "^5.9.1",
+    "@my-ba/domain": "workspace:*",
     "@my-ba/shared": "workspace:*",
     "@tanstack/react-table": "^9.2.4",
     "class-variance-authority": "^0.7.1",

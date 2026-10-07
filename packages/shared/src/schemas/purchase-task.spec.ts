@@ -33,9 +33,19 @@ describe("purchase task contract", () => {
     )
   })
 
-  it("carries criteria as an opaque record on the detail shape", () => {
-    const detail = purchaseTaskDetailSchema.parse({ ...SUMMARY, criteria: { vacancyMax: 1.5 } })
-    expect(detail.criteria).toEqual({ vacancyMax: 1.5 })
+  it("carries draft criteria on the detail shape, including the pre-P1-3 empty object", () => {
+    expect(purchaseTaskDetailSchema.parse({ ...SUMMARY, criteria: {} }).criteria).toEqual({})
+    const detail = purchaseTaskDetailSchema.parse({
+      ...SUMMARY,
+      criteria: { states: ["QLD"], filters: { maxVacancyRatePct: 1.5 } },
+    })
+    expect(detail.criteria.filters?.maxVacancyRatePct).toBe(1.5)
+  })
+
+  it("rejects criteria keys outside the schema (P1-3)", () => {
+    expect(
+      purchaseTaskDetailSchema.safeParse({ ...SUMMARY, criteria: { vacancyMax: 1.5 } }).success,
+    ).toBe(false)
   })
 
   it("wraps the list in items", () => {

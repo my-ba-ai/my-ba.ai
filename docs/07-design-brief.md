@@ -35,6 +35,7 @@ Deliverable from the design system pass: colour tokens, 6-step type scale, 4px s
 
 1. Basics — task name, target states (multi-select), property type, budget dual-handle range slider
 2. Criteria — grid of toggleable inputs (vacancy rate max, stock on market max, renter proportion min, demand-to-supply min, median yield min, days on market max), each with label, control and helper text
+   _Superseded in P1-3 (D43, D68, D69): no renter-proportion or demand-to-supply filters (renter share is a ranking factor; DSR is proprietary). The budget slider is the typical-price range in this step, and step 1 is strategy & risk. See roadmap P1-3._
 3. Review — criteria summary card, estimated runtime, "Create Task & Run Screening" / "Save as Draft"
 
 Validation: at least one state, at least three criteria enabled. Steps 1 and 3 must fit a 13" laptop without scrolling.

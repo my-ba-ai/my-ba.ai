@@ -33,8 +33,8 @@ export function TaskListEmpty() {
           No purchase tasks yet
         </h2>
         <p className="text-body text-ink-2">
-          A purchase task takes one search from criteria to agent outreach. Task creation arrives in
-          P1-3. Until then this list stays empty.
+          A purchase task takes one search from criteria to agent outreach. Start one with New
+          Purchase Task: you can save it as a draft and come back to it.
         </p>
       </div>
 

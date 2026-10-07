@@ -1,0 +1,57 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compileToHtagLogic (AC 2) > compiles every filter, scaling percents to fractions 1`] = `
+{
+  "and": [
+    {
+      "eq": "All",
+      "field": "bedrooms",
+    },
+    {
+      "field": "state",
+      "in": [
+        "QLD",
+        "NSW",
+      ],
+    },
+    {
+      "eq": "High",
+      "field": "confidence",
+    },
+    {
+      "field": "typical_price",
+      "gte": 500000,
+      "lte": 900000,
+    },
+    {
+      "field": "gross_yield",
+      "gte": 0.035,
+      "lte": 0.07,
+    },
+    {
+      "field": "vacancy_rate",
+      "lte": 0.025,
+    },
+    {
+      "field": "som_percent",
+      "lte": 0.013,
+    },
+    {
+      "field": "dom",
+      "lte": 65,
+    },
+    {
+      "field": "price_3y_cagr",
+      "lte": 0.144714,
+    },
+    {
+      "field": "annual_sales_volume",
+      "gte": 50,
+    },
+    {
+      "field": "irsad",
+      "gte": 3,
+    },
+  ],
+}
+`;

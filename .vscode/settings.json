@@ -1,7 +1,18 @@
 {
   "editor.defaultFormatter": "oxc.oxc-vscode",
   "editor.formatOnSave": true,
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
-  "cSpell.words": ["hypertable"]
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "cSpell.words": [
+    "customisation",
+    "Customise",
+    "Customised",
+    "htag",
+    "hypertable",
+    "irsad",
+    "normalise",
+    "normalised",
+    "normalising",
+    "serialise"
+  ]
 }

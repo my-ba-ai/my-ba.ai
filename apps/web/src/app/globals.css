@@ -152,8 +152,8 @@
   --color-primary: var(--accent);
   --color-primary-foreground: #ffffff;
 
-  --color-secondary: var(--surface);
-  --color-secondary-foreground: var(--ink-3);
+  --color-secondary: var(--accent-alt);
+  --color-secondary-foreground: #ffffff;
 
   --color-muted: var(--surface-sunk);
   --color-muted-foreground: var(--ink-muted);
@@ -225,7 +225,7 @@
   --shadow-hover: var(--elevation-hover);
   --shadow-cta: var(--elevation-cta);
 
-  /* --- Motion (§5). Nothing else animates. --------------------------- */
+  /* --- Motion (§5). Plus view transitions (D71, below). Nothing else animates. */
   --animate-pulse-live: pulse-live 1.7s ease-in-out infinite;
   --animate-shim: shim 1.25s linear infinite;
   --animate-drift: drift 14s ease-in-out infinite;
@@ -269,6 +269,107 @@
   }
   to {
     transform: translateX(0);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   View transitions (D71, amends design-system.md §5). React <ViewTransition>
+   + Next <Link transitionTypes>. Short and small on purpose: the longest move
+   is 220ms over 24px, in line with the drawer's .22s slidein.
+   --------------------------------------------------------------------------- */
+
+/* Clicks during a transition reach the live page instead of the overlay. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* Directional page slides (PageTransition). Forward: old leaves left, new
+   enters from the right. Back: the mirror. Old leaves fast, new arrives after. */
+::view-transition-old(.nav-forward) {
+  --vt-offset: -24px;
+  animation:
+    120ms ease-in both vt-fade reverse,
+    220ms ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --vt-offset: 24px;
+  animation:
+    180ms ease-out 120ms both vt-fade,
+    220ms ease-in-out both vt-slide;
+}
+::view-transition-old(.nav-back) {
+  --vt-offset: 24px;
+  animation:
+    120ms ease-in both vt-fade reverse,
+    220ms ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --vt-offset: -24px;
+  animation:
+    180ms ease-out 120ms both vt-fade,
+    220ms ease-in-out both vt-slide;
+}
+
+/* Shared element: task title on the list → detail heading. */
+::view-transition-group(.morph) {
+  animation-duration: 220ms;
+}
+::view-transition-image-pair(.morph) {
+  animation-name: vt-blur;
+}
+
+/* Criteria form steps: same place, different content. */
+::view-transition-group(.step-fade),
+::view-transition-old(.step-fade),
+::view-transition-new(.step-fade) {
+  animation-duration: 180ms;
+}
+
+/* The shell stays put while content slides. */
+::view-transition-group(app-sidebar),
+::view-transition-group(app-topbar) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(app-sidebar),
+::view-transition-old(app-topbar) {
+  display: none;
+}
+::view-transition-new(app-sidebar),
+::view-transition-new(app-topbar) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vt-slide {
+  from {
+    translate: var(--vt-offset);
+  }
+  to {
+    translate: 0;
+  }
+}
+
+@keyframes vt-blur {
+  30% {
+    filter: blur(3px);
   }
 }
 

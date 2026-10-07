@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server"
 import { APP_NAME, currentUserResponseSchema, TASK_STATUS_ORDER } from "@my-ba/shared"
 import { PipelineOutline } from "@/components/pipeline-outline"
 import { ApiContractError, ApiError, ApiUnreachableError, apiFetch } from "@/lib/api-client"
+import { unstable_rethrow } from "next/navigation"
 
 /**
  * Dev diagnostic at /dev/whoami (was the home page until P0-6). It walks the
@@ -38,6 +39,9 @@ async function loadIdentity() {
     const identity = await apiFetch("/auth/me", currentUserResponseSchema)
     return { ok: true as const, identity, sessionId }
   } catch (error: unknown) {
+    // Next's own control-flow errors (dynamic-usage bailout during prerender,
+    // notFound, redirect) must reach Next, not be logged as API failures.
+    unstable_rethrow(error)
     if (error instanceof ApiUnreachableError) {
       return { ok: false as const, stage: "unreachable" as const, detail: error.message }
     }

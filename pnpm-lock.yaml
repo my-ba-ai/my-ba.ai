@@ -38,6 +38,9 @@ importers:
       '@my-ba/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@my-ba/htag-client':
+        specifier: workspace:*
+        version: link:../../packages/htag-client
       '@my-ba/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -117,6 +120,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.2)
+      '@my-ba/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@my-ba/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -319,6 +325,9 @@ importers:
       '@my-ba/config':
         specifier: workspace:*
         version: link:../config
+      '@my-ba/domain':
+        specifier: workspace:*
+        version: link:../domain
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.2
@@ -374,6 +383,9 @@ importers:
 
   packages/shared:
     dependencies:
+      '@my-ba/domain':
+        specifier: workspace:*
+        version: link:../domain
       zod:
         specifier: ^4.0.0
         version: 4.6.2
