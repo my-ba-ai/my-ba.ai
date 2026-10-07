@@ -66,7 +66,7 @@ export function StageStepper({ status, variant = "compact", className, ...rest }
             <span
               className={cn(
                 "block font-data text-micro uppercase",
-                state === "todo" ? "text-ink-dim max-lg:hidden" : "text-ink-3",
+                state === "todo" ? "text-ink-dim max-lg:sr-only" : "text-ink-3",
               )}
             >
               <span className="text-ink-dim">{String(index + 1).padStart(2, "0")} </span>

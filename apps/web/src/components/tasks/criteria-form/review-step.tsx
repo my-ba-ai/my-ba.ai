@@ -99,14 +99,18 @@ export function ReviewStep({ estimate }: Readonly<{ estimate: ScreeningCostEstim
           {values.propertyType ? PROPERTY_TYPE_LABELS[values.propertyType] : "Not set"}
         </Row>
         <Row label="Filters">
-          {filters.length ? (
+          {filters.length || values.highConfidenceOnly ? (
             <ul className="space-y-0.5">
               {filters.map((f) => (
                 <li key={f.field}>
                   {f.label}: <span className="font-data">{f.text}</span>
                 </li>
               ))}
-              <li>{values.highConfidenceOnly ? "High-confidence data only" : "Any confidence"}</li>
+              {values.highConfidenceOnly ? (
+                <li>High-confidence data only</li>
+              ) : filters.length ? (
+                <li>Any confidence</li>
+              ) : null}
             </ul>
           ) : (
             <span className="text-ink-muted">None enabled</span>
