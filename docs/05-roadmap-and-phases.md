@@ -354,6 +354,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 - **`AnalysisSteps` ownership:** P1-4 writes the screening step's row (step 8). P1-6 generalises "every node writes a row" and owns status sync.
 - **Postcode (decided):** `suburbs.postcode` stays `NOT NULL`, but `/markets/query` rows carry only `area_name` and `state`. New suburbs get their postcode from the P1-10 SAL match when it went through HtAG (`htag_concordance` results carry `postcode`). Otherwise, including every plain name match (ABS SALs have no postcode), it comes from HtAG `/reference/locality` by `loc_pid` (Reference tier, recorded in `htag_calls`). Resolver lookups and locality calls record against the system tenant with no task. Resolve before insert, so no placeholder postcodes. Upsert and trend-cache read/write helpers in `@my-ba/db` are new code here.
 - **AC 7 reworded (2026-10-08):** first run ≤ $26.30, repeat run ≤ ~$16.10, in line with Q22.
+- **Resolver concurrency:** when P1-4 calls `createSalResolver` directly for suburbs it is about to insert, two overlapping screens can pay for the same ambiguous lookup. Serialise per `htag_area_id` (advisory lock or insert-then-`resolvePendingSuburbs`) so the guarantee P1-10 gives holds there too.
 - **Measures P1-10 AC 1:** report the share of screened suburbs with a renter proportion on the first real run; < 95% reopens the name normalisation.
 - **Open questions still touching P1-4:** Q04 is config only (AC 8). Q13(i) affects estimates, not the ledger (D62). Q21 deferred: top-N gets Restricted hydration only, no flags.
 
@@ -491,6 +492,8 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 - **AC 1 is deferred to P1-4's first real screen** (see AC 1).
 
 - **Follow-up landed on this branch (2026-10-08):** an `rls.integration.spec.ts` that fails if any public table except `suburb_metrics_ts` lacks forced RLS (the first `0015` shipped empty and nothing else noticed); opt-in pgAdmin (`pnpm db:admin`, `packages/db/pgadmin-servers.json`); the container init moved from `infra/postgres/init/` to `packages/db/sql/postgres-init.sql`, `infra/` removed; an AGENTS.md rule to put files where their kind already lives.
+
+- **Copilot review (PR #13), 2026-10-08:** `resolvePendingSuburbs` claims each suburb with `FOR UPDATE SKIP LOCKED` and re-checks it is unresolved, holding the row lock across the HtAG call. Overlapping runs never pay twice for a suburb (`skipped` in the summary), and a throwing lookup rolls back, leaving the suburb pending. `salToLocality` returns null only for a 404; a malformed 2xx throws `HtagResponseError`, so it is never persisted as `unmatched`. `loadSalNameIndex` refuses an empty dataset. The pgAdmin default password is read from the environment.
 
 **Verified (2026-10-08, Brian).** `0014` + `0015` migrate cleanly. `pnpm check`, `pnpm test:integration` (incl. `abs.integration.spec.ts`: AC 3, AC 4, RLS; `rls.integration.spec.ts`) and the concordance fixtures pass (AC 2, AC 5, AC 6). Code reviewed. **P1-10 complete**, with AC 1 measured on P1-4's first real screen.
 

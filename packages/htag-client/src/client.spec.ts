@@ -15,6 +15,7 @@ import {
   HtagBalanceExhaustedError,
   HtagNetworkError,
   HtagQuotaExceededError,
+  HtagResponseError,
   HtagServerError,
   HtagUnexpectedStatusError,
 } from "./errors"
@@ -545,16 +546,11 @@ describe("salToLocality (P1-10, D72)", () => {
     await expect(client.salToLocality("SAL13714")).rejects.toBeInstanceOf(HtagUnexpectedStatusError)
   })
 
-  it("a body that fails validation is logged and returns null", async () => {
+  it("a 2xx body that fails validation throws (retryable), never null like a 404", async () => {
     const { fetch } = sequence(() => toResponse(fixture(), { body: { loc_pid: "NSW3733" } }))
-    const { client, logger } = makeClient(fetch)
-    await expect(client.salToLocality("SAL13714")).resolves.toBeNull()
-    expect(logger.entries).toContainEqual(
-      expect.objectContaining({
-        level: "warn",
-        message: "Skipping HtAG row that failed validation",
-      }),
-    )
+    const { client, recorder } = makeClient(fetch)
+    await expect(client.salToLocality("SAL13714")).rejects.toBeInstanceOf(HtagResponseError)
+    expect(recorder.calls).toEqual([expect.objectContaining({ statusCode: 200, rowsReturned: 1 })])
   })
 
   it("a list-shaped body is an HtagResponseError, still recorded", async () => {

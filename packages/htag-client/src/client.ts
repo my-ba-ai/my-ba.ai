@@ -11,7 +11,7 @@ import {
   type HtagBedroomTrendMetric,
   type HtagTrendMetric,
 } from "./endpoints"
-import { HtagUnexpectedStatusError } from "./errors"
+import { HtagResponseError, HtagUnexpectedStatusError } from "./errors"
 import { send, type HttpContext } from "./http"
 import { consoleHtagLogger, type HtagLogger } from "./logger"
 import {
@@ -79,8 +79,10 @@ export interface HtagClient {
   ): Promise<HtagRowsResult<HtagTrendRow<M>>>
   /**
    * `GET /reference/concordance/sal-to-locality` (P1-10, D72). One ABS SAL
-   * code per call. Null when HtAG has no locality for the code (404) or the
-   * body fails validation (logged).
+   * code per call. Null only when HtAG has no locality for the code (404).
+   * A 2xx whose body fails validation throws `HtagResponseError` (still
+   * recorded in the ledger): callers persist `null` as "no SAL", so a
+   * malformed answer must stay a retryable failure, never look like one.
    */
   salToLocality(salCode: string): Promise<SalToLocalityRow | null>
 }
@@ -217,14 +219,16 @@ export function createHtagClient(config: HtagClientConfig, deps: HtagClientDeps)
       const code = salCodeSchema.parse(salCode)
       const path = HTAG_SAL_TO_LOCALITY_PATH
       try {
-        const { results } = await send(ctx, {
+        const { results, status } = await send(ctx, {
           method: "GET",
           path,
           tier: tierFor(path),
           query: new URLSearchParams({ sal_code: code }),
           envelope: "object",
         })
-        return parseRows(results, salToLocalityRecordSchema, path, logger).rows[0] ?? null
+        const parsed = salToLocalityRecordSchema.safeParse(results[0])
+        if (!parsed.success) throw new HtagResponseError(path, status, results[0])
+        return parsed.data
       } catch (error) {
         // An unknown code is a 404 `{ detail: "No locality found for sal_code=…" }`,
         // captured 2026-10-08 (fixture concordance-sal-to-locality-unknown). Free.

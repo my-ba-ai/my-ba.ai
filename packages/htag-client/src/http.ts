@@ -43,6 +43,8 @@ export interface HtagPage {
   /** Raw rows, not yet validated. */
   results: unknown[]
   billing: HtagBillingHeaders
+  /** The 2xx status the page arrived with. */
+  status: number
 }
 
 /** What the ledger stores as `request_json`: params or body as sent, never the key. */
@@ -198,7 +200,7 @@ export async function send(ctx: HttpContext, request: HtagRequest): Promise<Htag
         billingTier: billing.tier,
       })
       if (!results) throw new HtagResponseError(request.path, status, body)
-      return { results, billing }
+      return { results, billing, status }
     }
 
     await record(ctx, { ...base, ...unbilled, statusCode: status })
