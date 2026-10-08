@@ -56,7 +56,7 @@ condition = "AND"
 paths = [
   '''(?:^|/)\.env\.example$''',
   '''^docker-compose\.yml$''',
-  '''^infra/postgres/init/''',
+  '''^packages/db/sql/postgres-init\.sql$''',
   '''^\.github/workflows/ci\.yml$''',
 ]
 regexTarget = "line"

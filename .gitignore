@@ -29,3 +29,6 @@ coverage/
 
 # gitleaks reports (CI writes gitleaks.sarif)
 gitleaks.sarif
+
+# ABS Census DataPacks (P1-10, D72): downloaded locally, never committed
+data/abs/

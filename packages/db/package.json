@@ -29,7 +29,8 @@
     "bootstrap": "bash scripts/bootstrap-migrations.sh",
     "migrate": "tsx src/scripts/migrate.ts",
     "studio": "drizzle-kit studio",
-    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "abs:load": "tsx src/scripts/load-abs-tenure.ts"
   },
   "dependencies": {
     "@my-ba/shared": "workspace:*",

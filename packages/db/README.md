@@ -11,8 +11,10 @@ src/schema/     One file per table. The source of truth for both types and DDL.
 src/client.ts   Pool factory + drizzle instance.
 src/tenant.ts   withTenant() / withSystemTenant() — the only sanctioned way in.
 src/scripts/    migrate.ts, run by `pnpm db:migrate`.
-sql/            Hand-written DDL for the things drizzle-kit can't emit.
+sql/            Every hand-written `.sql`: custom-migration sources (D42) and
+                `postgres-init.sql`, the container init that creates `my_ba_app`.
 drizzle/        Generated migrations + journal. Do not edit applied files.
+pgadmin-servers.json  Connections pgAdmin pre-registers (`pnpm db:admin`, root README).
 ```
 
 ## pgvector
@@ -67,6 +69,22 @@ everything.
 Reference data — `suburbs` and `suburb_metrics_ts` — belongs to a system tenant
 that every tenant can read and only `withSystemTenant` can write (D38). That is how D26's "`tenant_id` on every table" is honoured without
 copying 7,000 suburbs per tenant or making the column nullable.
+
+## abs_sal_tenure (P1-10, D72)
+
+ABS 2021 Census tenure per Suburb and Locality, system-tenant reference data
+with the same RLS as `suburbs`. Loaded once per Census, not on a schedule:
+
+```bash
+# download 2021_GCP_SAL_for_AUS_short-header.zip into data/abs/ (gitignored), then
+pnpm abs:load
+```
+
+The loader checks the file against a pinned size and SHA-256 before parsing,
+and a re-run writes nothing. `suburbs.abs_sal_code` is filled lazily by
+`resolvePendingSuburbs` / `createSalResolver`: name match within the state
+first, HtAG concordance only for ambiguous names; `abs_sal_match` records how
+(or `unmatched`), so nothing is paid for twice.
 
 ## suburb_metrics_ts
 

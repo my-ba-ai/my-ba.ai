@@ -6,7 +6,7 @@
 --      owner is who migrations connect as. Without FORCE, every policy below
 --      would be inert for anyone connected as `postgres`.
 --   2. The application connects as `my_ba_app`, a NOSUPERUSER NOBYPASSRLS role
---      created by infra/postgres/init/01-app-role.sql. Superusers bypass RLS
+--      created by packages/db/sql/postgres-init.sql. Superusers bypass RLS
 --      unconditionally, so connecting the app as `postgres` in dev would mean
 --      discovering broken isolation only once a second tenant existed.
 --
@@ -17,7 +17,7 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'my_ba_app') THEN
-    RAISE EXCEPTION 'role my_ba_app does not exist. Create it before migrating: see infra/postgres/init/01-app-role.sql';
+    RAISE EXCEPTION 'role my_ba_app does not exist. Create it before migrating: see packages/db/sql/postgres-init.sql';
   END IF;
 END
 $$;

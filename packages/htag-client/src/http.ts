@@ -32,6 +32,11 @@ export interface HtagRequest {
   query?: URLSearchParams
   /** POST: JSON body. */
   body?: Record<string, unknown>
+  /**
+   * `results` (default): list endpoints, `{ results: [...] }`. `object`: the
+   * concordance endpoints answer with one bare object, counted as one row.
+   */
+  envelope?: "results" | "object"
 }
 
 export interface HtagPage {
@@ -44,6 +49,15 @@ export interface HtagPage {
 function requestForLedger(request: HtagRequest): Record<string, unknown> {
   if (request.body) return request.body
   return Object.fromEntries(request.query ?? new URLSearchParams())
+}
+
+/** The rows a 2xx body carries, or null if it is not the shape the endpoint promises. */
+function extractResults(envelope: HtagRequest["envelope"], body: unknown): unknown[] | null {
+  if (envelope === "object") {
+    return body !== null && typeof body === "object" && !Array.isArray(body) ? [body] : null
+  }
+  const parsed = htagEnvelopeSchema.safeParse(body)
+  return parsed.success ? parsed.data.results : null
 }
 
 async function readBody(response: Response): Promise<unknown> {
@@ -163,8 +177,8 @@ export async function send(ctx: HttpContext, request: HtagRequest): Promise<Htag
 
     if (status >= 200 && status < 300) {
       const billing = parseBillingHeaders(response.headers, ctx.logger)
-      const envelope = htagEnvelopeSchema.safeParse(body)
-      const rowsReturned = envelope.success ? envelope.data.results.length : 0
+      const results = extractResults(request.envelope, body)
+      const rowsReturned = results?.length ?? 0
       const cost = costOfRecord({
         status,
         billing,
@@ -183,8 +197,8 @@ export async function send(ctx: HttpContext, request: HtagRequest): Promise<Htag
         billingBalanceAud: billing.balance,
         billingTier: billing.tier,
       })
-      if (!envelope.success) throw new HtagResponseError(request.path, status, body)
-      return { results: envelope.data.results, billing }
+      if (!results) throw new HtagResponseError(request.path, status, body)
+      return { results, billing }
     }
 
     await record(ctx, { ...base, ...unbilled, statusCode: status })

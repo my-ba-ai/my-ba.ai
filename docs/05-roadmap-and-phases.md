@@ -60,7 +60,7 @@
 
 **Description:** CI has no Postgres, so `pnpm test:integration` (the P0-5 gate) runs only on a dev machine. A regression in LangGraph or the checkpointer — a `@langchain/*` bump, a `PostgresSaver` schema change, a lost grant on `langgraph.*` — would merge unnoticed. Add a second job, `integration`, to `.github/workflows/ci.yml`.
 
-- Start Postgres with `pnpm db:up` (`docker compose up -d --wait postgres`), **not** a GitHub Actions `services:` container. The `my_ba_app` role is created by `infra/postgres/init/01-app-role.sql` through `docker-entrypoint-initdb.d`. Service containers start before checkout and can't mount repo files, so that path would need a second copy of the role setup.
+- Start Postgres with `pnpm db:up` (`docker compose up -d --wait postgres`), **not** a GitHub Actions `services:` container. The `my_ba_app` role is created by `packages/db/sql/postgres-init.sql` (originally `infra/postgres/init/01-app-role.sql`) through `docker-entrypoint-initdb.d`. Service containers start before checkout and can't mount repo files, so that path would need a second copy of the role setup.
 - Job env: `DATABASE_URL=postgresql://my_ba_app:app@localhost:5432/my_ba`, `DATABASE_MIGRATION_URL=postgresql://postgres:postgres@localhost:5432/my_ba`. No `.env` files; `loadEnvFiles` already tolerates their absence.
 - Steps: checkout → pnpm/node setup → `pnpm install --frozen-lockfile` → `pnpm turbo run build --filter=@my-ba/orchestrator...` (the suite imports `@my-ba/db` from `dist`) → `pnpm db:up` → `pnpm db:migrate` → `pnpm test:integration`.
 - Only Postgres is started; Redis isn't needed.
@@ -88,7 +88,7 @@
 
 - **Config:** `.gitleaks.toml` at the repo root that extends the default ruleset (`[extend] useDefault = true`), plus:
   - Custom rules for the providers this project uses where the defaults might not cover them: Clerk `pk_(test|live)_…` and `sk_(test|live)_…`, and HtAG, Domain, Apify, Resend/SendGrid and Cloudflare R2 token shapes. For each provider, check the gitleaks default rules first and add a rule only where one is missing; don't guess at token formats.
-  - An allowlist that is exactly: the `*_replace_me` placeholders in `**/.env.example`, and the local docker-compose credentials (`postgres:postgres@localhost`, `my_ba_app:app@localhost`) in `.env.example`, `docker-compose.yml` and `infra/postgres/init/`. Nothing broader: no whole-file or whole-directory allowlists.
+  - An allowlist that is exactly: the `*_replace_me` placeholders in `**/.env.example`, and the local docker-compose credentials (`postgres:postgres@localhost`, `my_ba_app:app@localhost`) in `.env.example`, `docker-compose.yml` and `packages/db/sql/postgres-init.sql` (originally `infra/postgres/init/`). Nothing broader: no whole-file or whole-directory allowlists.
 - **CI:** a `secrets` job in `.github/workflows/ci.yml`, in parallel with `verify`.
   - Checkout uses `fetch-depth: 0`.
   - Run the **gitleaks CLI** (pinned version, checksum-verified download), not `gitleaks/gitleaks-action`: the action needs a `GITLEAKS_LICENSE` for repos owned by an organisation (`my-ba-ai` is one), and the CLI doesn't.
@@ -206,7 +206,7 @@ Governing decisions: D16–D19, D37–D44.
 **Implemented (2026-09-24).** Decisions made at build time, each a delta from the description above:
 
 - **Time column:** P0-2 called it `observed_at`, not `timestamp`. It's renamed to `measured_at` anyway, to match D40.
-- **`htag_area_id`:** `suburbs.htag_id` is renamed rather than a second column added. The unique index stays per tenant, `(tenant_id, htag_area_id)`, to fit the system-tenant model (D38), not a bare global `unique`. `abs_sal_code` gets a plain index for the P1-10 join.
+- **`htag_area_id`:** `suburbs.htag_id` is renamed rather than a second column added. The unique index stays per tenant, `(tenant_id, htag_area_id)`, to fit the system-tenant model (`SYSTEM_TENANT_ID`, see `tenants.ts`), not a bare global `unique`. `abs_sal_code` gets a plain index for the P1-10 join.
 - **Primary key, not an extra unique index:** the D40 key replaces the old `(suburb_id, metric_name, observed_at)` PK. Keeping the old PK would have made house and unit rows for the same period collide.
 - **Compression bracketing (D60):** Timescale won't change a PK or partitioning column while compression is on. So `0010` (custom) removes the policy, truncates the cache and disables compression, `0011` is the drizzle-generated delta, and `0012` (custom) re-enables compression with `segmentby` extended to `property_type, bedrooms`. `0012` also adds `htag_calls` RLS. SQL is kept in `packages/db/sql/`.
 - **`source`** keeps P0-2's uppercase `'HTAG'` default, not the ticket's `'htag'`.
@@ -340,10 +340,22 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 4. `costAud` summed from `htag_calls` for the step; stored on `AnalysisSteps`.
 5. `HtagQuotaExceededError` / `HtagBalanceExhaustedError` fail the step with a typed reason; task remains resumable after resolution.
 6. `low_volatility` auto-disabled (weight redistributed) when < 18 price points available for the survivor set; recorded in `disabledFactors`.
-7. Fixture run at configured tier rates costs ≤ $20. If Q13(i) resolves per-row, `SCREEN_QUERY_LIMIT` set to 80 and this test re-run.
+7. Fixture run at configured tier rates: first run (no cached history) costs ≤ $26.30; repeat run on cached suburbs costs ≤ ~$16.10 (Q22, D73). If Q13(i) resolves per-row, `SCREEN_QUERY_LIMIT` set to 80 and this test re-run.
 8. Q04: dev config can restrict `states` to one state without code change.
 
 **Dependencies:** P0-5, P1-1, P1-3, P1-8; P1-10 soft (renter factor absent → coverage renormalises). **Risk:** medium.
+
+**Scoping (2026-10-08, D73).** Decided before build; deltas from the description above:
+
+- **Order:** P1-10 lands first, so the renter factor is live on the first real run. Step 5 calls P1-10's SAL resolver for newly upserted suburbs.
+- **Schema in scope:** P1-4 creates `analysis_steps` and `screening_results` (tenant-scoped, RLS) and adds the deferred FK from `htag_calls.analysis_step_id` (P1-0). Migrations generated from the Drizzle schema. `screening_results` documents the `Ranked` shape (P1-0 note); `score_breakdown_json` is parsed with P1-8's `rankedSchema` on read.
+- **Orchestrator:** `StageName` gains `screening`; `GatePayload` gains the two typed interrupts (`SCREENING_TOO_BROAD`, `SCREENING_APPROVAL`) alongside the spike's generic one. Callers still see only the `Orchestrator` contract (D22 fallback intact).
+- **Queue + dev trigger in scope:** a `screening` BullMQ queue and worker processor (registered by this ticket, per P0-4), plus a dev-only authenticated `POST` endpoint that enqueues a screening run for a task. Mounted only outside production behind an env flag (same pattern as Bull Board). The user-facing Run button, status transitions, Reject & Adjust and the approval/resume endpoint stay in P1-6.
+- **`AnalysisSteps` ownership:** P1-4 writes the screening step's row (step 8). P1-6 generalises "every node writes a row" and owns status sync.
+- **Postcode (decided):** `suburbs.postcode` stays `NOT NULL`, but `/markets/query` rows carry only `area_name` and `state`. New suburbs get their postcode from the P1-10 SAL match when it went through HtAG (`htag_concordance` results carry `postcode`). Otherwise, including every plain name match (ABS SALs have no postcode), it comes from HtAG `/reference/locality` by `loc_pid` (Reference tier, recorded in `htag_calls`). Resolver lookups and locality calls record against the system tenant with no task. Resolve before insert, so no placeholder postcodes. Upsert and trend-cache read/write helpers in `@my-ba/db` are new code here.
+- **AC 7 reworded (2026-10-08):** first run ≤ $26.30, repeat run ≤ ~$16.10, in line with Q22.
+- **Measures P1-10 AC 1:** report the share of screened suburbs with a renter proportion on the first real run; < 95% reopens the name normalisation.
+- **Open questions still touching P1-4:** Q04 is config only (AC 8). Q13(i) affects estimates, not the ledger (D62). Q21 deferred: top-N gets Restricted hydration only, no flags.
 
 ### P1-5 — Approval UI
 
@@ -437,18 +449,50 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 
 **Dependencies:** P0-6. **Risk:** low.
 
-### P1-10 — ABS tenure ETL (renter proportion)
+### P1-10 — ABS tenure load (renter proportion)
 
-**Description:** One-off + annual BullMQ job loading 2021 Census tenure data (renter proportion per suburb) into Postgres, joined to `Suburbs` via ABS SAL code ↔ HtAG `loc_pid` concordance. Pulled forward from Phase 2 (tenure only; rest of ABS ETL stays in Phase 2).
+**Description:** One-off, idempotent command (like `pnpm db:migrate`, not a scheduled job) loading 2021 Census tenure per ABS Suburb and Locality (SAL) into a system-tenant reference table, plus a resolver that links `suburbs` rows to SAL codes so P1-4 can attach `renterProportion` to `RawMetrics`. Pulled forward from Phase 2 (tenure only; rest of ABS ETL stays in Phase 2). Design in D72.
+
+1. **Load:** read the ABS 2021 General Community Profile DataPack for SAL (table G37, tenure and landlord type) and the SAL names from the DataPack's geography descriptor, from a local path (not committed; file checksum recorded). Upsert into `abs_sal_tenure` keyed by `(sal_code, census_year)`, owned by the system tenant (CHECK-pinned like `suburb_metrics_ts`).
+2. **Renter proportion** = rented dwellings ÷ (occupied private dwellings − tenure "not stated"), stored as a 0–1 fraction (P1-8's `renterProportion`). Null below 20 dwellings with a stated tenure (`MIN_TENURE_DWELLINGS`), where ABS perturbation is as large as the signal. Raw counts are stored too, so the definition can be recomputed.
+3. **Resolver** `resolveSalCodes(suburbs)` in `@my-ba/db`, for suburbs with no `abs_sal_code`:
+   - **Name match first (free):** normalise names (case, strip ABS parenthetical disambiguators such as `(NSW)`, whitespace and punctuation) and match within state. Exactly one candidate → match.
+   - **HtAG fallback:** zero or several candidates → call `/reference/concordance/sal-to-locality` (Reference tier) on each candidate SAL and keep the one whose `loc_pid` equals the suburb's `htag_area_id`. Calls are recorded in `htag_calls` (system tenant, no task).
+   - **No match:** `abs_sal_code` stays null and `renterProportion` is undefined (AC 4).
+   - The match method (`name` | `htag_concordance`) is stored with the code, so name matches can be audited.
+
+**Why lazy, not a national mapping:** `sal-to-locality` maps SAL → `loc_pid` one code per call, with no reverse lookup. A bulk HtAG-side name list (`/reference/locality`) is capped at 10k billable rows a month, below ~15k localities. Screens return ≤ 100 suburbs, so resolving at upsert time costs cents.
+
+**Probe findings (2026-10-08, ~$0.006, via the HtAG MCP connector):** `SAL13714` → `NSW3733` SURRY HILLS 2010; `SAL20001` → `VIC1` ABBEYARD; `SAL30001` → `QLD1` ABBEYWOOD. Each call returns exactly one locality with `postcode`. Both code schemes are alphabetical within state, but the numbers diverge (13714 vs 3733), so there's no arithmetic shortcut. Not verified: billing per call (the connector hides `X-Billing-*` headers). Low stakes, because the fallback makes a handful of calls per screen.
+
+**Source verified (2026-10-08):** `2021_GCP_SAL_for_AUS_short-header.zip` (ABS Census DataPacks, 2021 GCP, SAL for AUS, short headers; 102,626,503 bytes; sha256 `940c5708…9b7bdba`), kept in gitignored `data/abs/`. Table: `2021Census_G37_AUST_SAL.csv`, 15,352 SALs. Columns: `R_Tot_Total` (rented), `Ten_type_NS_Total` (tenure not stated), `Total_Total` (occupied private dwellings). 1,153 SALs have a zero denominator, so they store null. Spot check: Surry Hills (`SAL13714`) = 5,088 ÷ (7,776 − 100) = 0.663. Names come from `Metadata/2021Census_geog_desc_1st_2nd_3rd_release.xlsx`. They carry state disambiguators, for example `Paddington (NSW)` and `Paddington (Qld)`.
 
 **Acceptance criteria:**
 
-1. Renter proportion available for ≥ 95% of suburbs returned by a representative screen fixture.
-2. Concordance source recorded. **Check before build:** which Census DataPack table holds tenure at SAL level, and whether HtAG's Concordance endpoints (Reference tier) or ABS correspondence files provide SAL ↔ `loc_pid` mapping.
-3. Idempotent re-run.
+1. Renter proportion available for ≥ 95% of suburbs returned by a representative screen fixture. **Measured on P1-4's first real screen (decided 2026-10-08)**, not with a paid name sample; P1-10 closes with AC 1 pending.
+2. Data source recorded: DataPack name, release, table, file checksum (above). The load verifies the checksum and fails loudly on mismatch or a missing column.
+3. Idempotent re-run: a second load changes no rows; a second resolve makes no HtAG calls.
 4. Missing mapping → `renterProportion` undefined (P1-8 coverage handles it), not a failure.
+5. Ambiguous names (same name twice in one state) resolve through the HtAG fallback in a test with a mocked client; the zero-candidate case makes no calls.
+6. `renterProportion` is exactly rented ÷ (occupied − not stated), unit-tested on a fixture row, including a zero-denominator row and one under 20 dwellings (→ null).
 
-**Dependencies:** P1-0. **Risk:** medium (SAL ↔ loc_pid mapping unverified).
+**Dependencies:** P1-0, P1-1 (client for the fallback). **Risk:** low–medium (name normalisation edge cases).
+
+**Implemented (2026-10-08).** Deltas from the description above:
+
+- **Where things live:** `@my-ba/db` `src/abs/` — `datapack.ts` (checksum pin, zip and XLSX readers on `node:zlib`, G37 parser, `renterProportion`, join), `sal-match.ts` (name normalisation, name index), `sal-resolver.ts` (`createSalResolver`, lookup injected so `@my-ba/db` stays free of the HtAG client), `repository.ts` (`upsertAbsSalTenure`, `loadSalNameIndex`, `renterProportionsBySalCode`, `resolvePendingSuburbs`). CLI `pnpm abs:load [zip]` (`src/scripts/load-abs-tenure.ts`).
+- **No new dependency:** the readers are deliberately narrow (no CSV quoting, no general XLSX model). That's safe only because the input is pinned by size and SHA-256 and fails before parsing if it changes.
+- **Schema:** `abs_sal_tenure`, keyed `(sal_code, census_year)`, system-tenant CHECK, reference-data RLS (`sql/abs-sal-tenure-rls.sql`). Raw counts plus `renter_proportion` and `source_sha256`. `suburbs.abs_sal_match` (`name` | `htag_concordance` | `unmatched`, null = not attempted), with a CHECK that a code exists exactly when a method found one. `unmatched` is stored so a re-run makes no HtAG call (AC 3).
+- **Perturbed and tiny cells:** ABS perturbs small counts, so 37 SALs report more rented than occupied dwellings, and one reports a negative denominator. Any fraction outside [0, 1] stores null, and so does any SAL under 20 dwellings with a stated tenure (decided 2026-10-08). The 2021 pack loads 15,345 SALs (7 Other Territories skipped, not an `AU_STATES` value), 4,726 of them with a null proportion. Nearly all are rural localities a screen won't return.
+- **HtAG client:** `salToLocality(salCode)` on `/reference/concordance/sal-to-locality` (Reference). The endpoint returns a bare object, so `send()` gained `envelope: "object"` (counted as one row). A 404 maps to null. Captured 2026-10-08 (`HTAG_CAPTURE_ONLY='^concordance-'`): an unknown code is a free 404 `{ detail: "No locality found…" }`, and a hit bills one unit (inside the free allowance at capture).
+- **Name matches carry no postcode** (ABS SALs have none). Only a concordance match returns one. P1-4's postcode rule falls back to `/reference/locality` for name matches (D73).
+- **Tests:** `datapack.spec.ts` (AC 2, AC 6: definition, zero and negative denominators, perturbed > 1; readers on an in-test zip/XLSX), `sal-match.spec.ts`, `sal-resolver.spec.ts` (AC 5), `schema.spec.ts` (new CHECKs, PK), `abs.integration.spec.ts` (AC 3 idempotent load and resolve, AC 4, RLS read/write, DB CHECKs); htag-client `client.spec.ts` (salToLocality: request, ledger row, 404, bad body, list body) and `spec-contract.spec.ts` (`SalToLocalityResponse` field set, Reference tier).
+- **Pre-verification run (Claude, 2026-10-08):** `tsc` clean for `@my-ba/db` (src + specs) and `@my-ba/htag-client` (src + specs). Under Node's type stripping with a Vitest shim: db `abs` unit specs 41/41; htag-client client + contract + config 73/74. The one failure is the expected missing captured concordance fixture. A dry run against the real DataPack parses in ~1.3 s and gives Surry Hills 0.663; 138 names are ambiguous within a state. Not run here: Vitest itself, oxlint, oxfmt, migrations, the integration spec.
+- **AC 1 is deferred to P1-4's first real screen** (see AC 1).
+
+- **Follow-up landed on this branch (2026-10-08):** an `rls.integration.spec.ts` that fails if any public table except `suburb_metrics_ts` lacks forced RLS (the first `0015` shipped empty and nothing else noticed); opt-in pgAdmin (`pnpm db:admin`, `packages/db/pgadmin-servers.json`); the container init moved from `infra/postgres/init/` to `packages/db/sql/postgres-init.sql`, `infra/` removed; an AGENTS.md rule to put files where their kind already lives.
+
+**Verified (2026-10-08, Brian).** `0014` + `0015` migrate cleanly. `pnpm check`, `pnpm test:integration` (incl. `abs.integration.spec.ts`: AC 3, AC 4, RLS; `rls.integration.spec.ts`) and the concordance fixtures pass (AC 2, AC 5, AC 6). Code reviewed. **P1-10 complete**, with AC 1 measured on P1-4's first real screen.
 
 **Deliverable:** create a task with a strategy and risk profile, run a screen within budget, see a ranked list explained factor by factor, get told when criteria are too broad, approve or reject, see the task advance.
 
@@ -518,7 +562,7 @@ P0-5 spike ──▶ P1-4/P1-6 (orchestration) ──▶ Phase 2 agents ──�
 P1-8 ranking ─┐
 P1-3 criteria ┼──▶ P1-4 screener
 P1-1 client ──┘
-P1-10 ABS (soft) ─▶ P1-4
+P1-10 ABS ───────▶ P1-4 (built first, D73)
 
 Q13(i) Reference billing ──▶ P1-4 config (query limit 100 vs 80)
 Q16 state field + vacancy units ──▶ P1-3 merge

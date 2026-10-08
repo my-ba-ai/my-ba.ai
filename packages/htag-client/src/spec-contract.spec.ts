@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { z } from "zod"
 import { capturedFixtures, loadOpenApi } from "../test/helpers"
-import { HTAG_ENDPOINT_TIERS, HTAG_QUERY_PATH } from "./endpoints"
+import { HTAG_ENDPOINT_TIERS, HTAG_QUERY_PATH, HTAG_SAL_TO_LOCALITY_PATH } from "./endpoints"
 import {
   daysOnMarketTrendRecordSchema,
   htagEnvelopeSchema,
@@ -9,6 +9,7 @@ import {
   marketSummaryRecordSchema,
   priceTrendRecordSchema,
   rentTrendRecordSchema,
+  salToLocalityRecordSchema,
   stockOnMarketTrendRecordSchema,
   vacancyTrendRecordSchema,
   yieldTrendRecordSchema,
@@ -29,6 +30,7 @@ const ROW_SCHEMAS: Record<string, z.ZodObject> = {
   StockOnMarketTrendRecord: stockOnMarketTrendRecordSchema,
   DaysOnMarketTrendRecord: daysOnMarketTrendRecordSchema,
   VacancyTrendRecord: vacancyTrendRecordSchema,
+  SalToLocalityResponse: salToLocalityRecordSchema,
 }
 
 /** Where the live API (captured fixtures) contradicts the spec: spec field → live field. */
@@ -58,6 +60,7 @@ describe("endpoint value tiers vs x-htg-pricingTier (D61, D62)", () => {
 const schemaFor = (path: string) => {
   if (path === HTAG_QUERY_PATH) return marketQueryRecordSchema
   if (path === "/markets/summary") return marketSummaryRecordSchema
+  if (path === HTAG_SAL_TO_LOCALITY_PATH) return salToLocalityRecordSchema
   const metric = path.replace("/markets/trends/", "")
   return {
     price: priceTrendRecordSchema,
@@ -80,7 +83,11 @@ describe("captured fixtures parse (AC 2)", () => {
   it.each(successes.map((f) => [f.name, f] as const))("%s", (_, fixture) => {
     const schema = schemaFor(fixture.request.path)
     expect(schema).toBeDefined()
-    const { results } = htagEnvelopeSchema.parse(fixture.body)
+    // Concordance endpoints answer with one bare object, not `{ results }` (P1-10).
+    const results =
+      fixture.request.path === HTAG_SAL_TO_LOCALITY_PATH
+        ? [fixture.body]
+        : htagEnvelopeSchema.parse(fixture.body).results
     for (const row of results) expect(schema?.safeParse(row).success).toBe(true)
   })
 

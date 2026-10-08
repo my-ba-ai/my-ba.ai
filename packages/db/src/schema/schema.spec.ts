@@ -18,6 +18,7 @@ const sqlName = (column: Column): string =>
 describe("schema", () => {
   it("exports every table", () => {
     expect(tables.map(getTableName).toSorted()).toEqual([
+      "abs_sal_tenure",
       "htag_calls",
       "purchase_tasks",
       "suburb_metrics_ts",
@@ -97,5 +98,29 @@ describe("schema", () => {
     expect(callChecks).toContain("htag_calls_cost_source_check")
     expect(callChecks).toContain("htag_calls_billing_tier_check")
     expect(callChecks).toContain("htag_calls_billed_units_check")
+  })
+})
+
+describe("P1-10 reference tables (D72)", () => {
+  it("pins abs_sal_tenure to the system tenant", () => {
+    const { checks } = getTableConfig(schema.absSalTenure)
+    expect(checks.map((constraint) => constraint.name)).toEqual(
+      expect.arrayContaining([
+        "abs_sal_tenure_system_tenant_only",
+        "abs_sal_tenure_renter_proportion_check",
+      ]),
+    )
+  })
+
+  it("keys abs_sal_tenure by SAL code and Census year, so a reload upserts", () => {
+    const { primaryKeys } = getTableConfig(schema.absSalTenure)
+    expect(primaryKeys[0]?.columns.map(sqlName)).toEqual(["sal_code", "census_year"])
+  })
+
+  it("ties suburbs.abs_sal_code to a match method", () => {
+    const { checks } = getTableConfig(schema.suburbs)
+    expect(checks.map((constraint) => constraint.name)).toEqual(
+      expect.arrayContaining(["suburbs_abs_sal_match_check", "suburbs_abs_sal_code_match_check"]),
+    )
   })
 })

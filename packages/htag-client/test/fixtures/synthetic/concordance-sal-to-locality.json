@@ -1,0 +1,20 @@
+{
+  "name": "concordance-sal-to-locality",
+  "synthetic": true,
+  "note": "Body observed 2026-10-08 through the HtAG MCP connector (concordance_sal_to_locality, SAL13714), which hides response headers. Replace with a captured fixture: HTAG_CAPTURE_ONLY='^concordance-' scripts/htag/capture-fixtures.sh.",
+  "request": {
+    "method": "GET",
+    "path": "/reference/concordance/sal-to-locality",
+    "query": "sal_code=SAL13714",
+    "body": null
+  },
+  "status": 200,
+  "headers": { "content-type": "application/json" },
+  "body": {
+    "sal_code_2021": "SAL13714",
+    "loc_pid": "NSW3733",
+    "name": "SURRY HILLS",
+    "postcode": "2010",
+    "state_pid": "1"
+  }
+}

@@ -21,7 +21,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/home/postgres/pgdata/data
-      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+      # Creates the my_ba_app role on first boot of an empty volume (packages/db).
+      - ./packages/db/sql/postgres-init.sql:/docker-entrypoint-initdb.d/01-app-role.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d my_ba"]
       interval: 5s
@@ -48,6 +49,37 @@ services:
       timeout: 3s
       retries: 20
 
+  # Optional database browser. Not started by `pnpm db:up`: opt in with
+  # `pnpm db:admin`, then open http://localhost:5050.
+  #
+  # Desktop mode (SERVER_MODE False): no pgAdmin login and no master password,
+  # so it is bound to 127.0.0.1 only. Both connections in
+  # packages/db/pgadmin-servers.json are pre-registered on first start, without
+  # passwords: pgAdmin asks on first connect (postgres / app, as above) and
+  # can remember them in its own volume. The image refuses to start without
+  # a default email and password even in desktop mode; neither is used to log
+  # in to anything.
+  pgadmin:
+    image: dpage/pgadmin4:9.8
+    container_name: my-ba-pgadmin
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@example.com
+      PGADMIN_DEFAULT_PASSWORD: unused-in-desktop-mode
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_DISABLE_POSTFIX: "true"
+    ports:
+      - "127.0.0.1:5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./packages/db/pgadmin-servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres-data:
   redis-data:
+  pgadmin-data:

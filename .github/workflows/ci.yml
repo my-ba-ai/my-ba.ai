@@ -145,7 +145,7 @@ jobs:
         run: docker compose pull postgres
 
       # docker compose, not a `services:` container: the my_ba_app role comes from
-      # infra/postgres/init via docker-entrypoint-initdb.d, which needs the checkout
+      # packages/db/sql/postgres-init.sql via docker-entrypoint-initdb.d, which needs the checkout
       # mounted. Redis isn't needed, so only postgres is started.
       - name: Start Postgres
         run: pnpm db:up postgres
