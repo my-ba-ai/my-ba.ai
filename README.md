@@ -17,8 +17,6 @@ packages/
   orchestrator/ Stage orchestration behind the `Orchestrator` interface (LangGraph.js + PostgresSaver).
   htag-client/ HtAG REST client: fetch + Zod, spend reported via an injected recorder (D63). Server-side only.
   config/     Shared tsconfig presets (base / lib / nest / next).
-infra/
-  postgres/   Container init — creates the non-superuser application role.
 ```
 
 `packages/shared` compiles to `dist` and every app depends on its `build`, so
@@ -75,24 +73,51 @@ CI failures early; CI stays the gate.
 `pnpm hooks:run` runs the pre-commit checks over every file without staging
 anything.
 
+### Browsing the database (pgAdmin)
+
+```bash
+pnpm db:admin       # then open http://localhost:5050
+```
+
+Two servers are pre-registered under "my-ba local"; pgAdmin asks for the
+password on first connect (the dev passwords in `docker-compose.yml`).
+
+- **postgres (owner)** bypasses RLS: every tenant's rows. Use this to browse.
+- **my_ba_app** is the app role, so RLS applies and tables look empty until a
+  tenant is set. "View/Edit Data" opens its own connection, so set the tenant
+  in the Query Tool, in the same transaction as the query:
+
+  ```sql
+  begin;
+  select set_config('app.tenant_id', '00000000-0000-0000-0000-000000000000', true); -- system tenant
+  select * from abs_sal_tenure limit 20;
+  commit;
+  ```
+
+The server list is imported only on pgAdmin's first start. After editing
+`packages/db/pgadmin-servers.json`, reset it with
+`docker compose --profile tools down && docker volume rm $(docker volume ls -q --filter name=pgadmin-data)`
+(only pgAdmin's volume; never `down -v`, which also drops Postgres).
+
 ## Scripts
 
-| Command                  | What it does                                                               |
-| ------------------------ | -------------------------------------------------------------------------- |
-| `pnpm dev`               | All three apps in watch mode                                               |
-| `pnpm build`             | Turbo build, respecting the dependency graph                               |
-| `pnpm typecheck`         | `tsc --noEmit` across every workspace                                      |
-| `pnpm lint`              | Oxlint, Tailwind canonical check, HtAG-stays-server-side check (P1-1)      |
-| `pnpm format`            | oxfmt (write); `pnpm format:check` in CI                                   |
-| `pnpm test`              | Vitest across every workspace                                              |
-| `pnpm check`             | typecheck + lint + format:check + test — CI `verify` job                   |
-| `pnpm db:up` / `db:down` | Local Postgres + Redis via docker compose                                  |
-| `pnpm db:generate`       | Schema change → migration. Never hand-write `CREATE TABLE`                 |
-| `pnpm db:migrate`        | Drizzle migrations + `PostgresSaver.setup()` (D39, D51)                    |
-| `pnpm test:integration`  | P0-5 durability suite (CI `integration` job). Needs `db:up` + `db:migrate` |
-| `pnpm db:studio`         | Drizzle Studio against the local database                                  |
-| `pnpm secrets:scan`      | gitleaks over the full git history, as CI's `secrets` job does on `main`   |
-| `pnpm hooks:run`         | The pre-commit hook over every file. Formats, but stages nothing           |
+| Command                  | What it does                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `pnpm dev`               | All three apps in watch mode                                                  |
+| `pnpm build`             | Turbo build, respecting the dependency graph                                  |
+| `pnpm typecheck`         | `tsc --noEmit` across every workspace                                         |
+| `pnpm lint`              | Oxlint, Tailwind canonical check, HtAG-stays-server-side check (P1-1)         |
+| `pnpm format`            | oxfmt (write); `pnpm format:check` in CI                                      |
+| `pnpm test`              | Vitest across every workspace                                                 |
+| `pnpm check`             | typecheck + lint + format:check + test — CI `verify` job                      |
+| `pnpm db:up` / `db:down` | Local Postgres + Redis via docker compose                                     |
+| `pnpm db:generate`       | Schema change → migration. Never hand-write `CREATE TABLE`                    |
+| `pnpm db:migrate`        | Drizzle migrations + `PostgresSaver.setup()` (D39, D51)                       |
+| `pnpm test:integration`  | P0-5 durability suite (CI `integration` job). Needs `db:up` + `db:migrate`    |
+| `pnpm db:studio`         | Drizzle Studio against the local database                                     |
+| `pnpm db:admin`          | pgAdmin on http://localhost:5050 (opt-in `tools` profile; `db:down` stops it) |
+| `pnpm secrets:scan`      | gitleaks over the full git history, as CI's `secrets` job does on `main`      |
+| `pnpm hooks:run`         | The pre-commit hook over every file. Formats, but stages nothing              |
 
 ## Conventions
 
@@ -196,4 +221,16 @@ Phase 1 — HtAG Integration + Suburb Screener:
   `price_3y_cagr` works in `logic` (Q16). `pnpm check`, `pnpm build`,
   `pnpm test:integration`, `pnpm secrets:scan` and CI pass (2026-10-07).
 
-Next up: **P1-10** (ABS tenure) or **P1-4** (screener).
+- **P1-10 complete:** ABS 2021 Census tenure. `pnpm abs:load` reads the
+  SAL DataPack from gitignored `data/abs/` (pinned by SHA-256) into
+  `abs_sal_tenure`: 15,345 suburbs, raw counts plus a renter proportion
+  (rented ÷ stated tenure, null under 20 dwellings or when ABS perturbation
+  pushes it outside 0–1). `suburbs` gain `abs_sal_match`; the resolver
+  matches by name within the state and asks HtAG's `sal-to-locality`
+  concordance only for ambiguous names, recording `unmatched` so nothing is
+  paid twice (D72). Migrations `0014`–`0015`, an RLS-coverage integration
+  test, and opt-in pgAdmin (`pnpm db:admin`). AC 1 (≥ 95% coverage) is
+  measured on P1-4's first real screen. `pnpm check` and
+  `pnpm test:integration` pass (2026-10-08).
+
+Next up: **P1-4** (screener, D73).

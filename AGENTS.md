@@ -66,6 +66,13 @@ the first thing to read before proposing anything architectural.
 - **TypeScript strict**, plus `noUncheckedIndexedAccess`, `noUnusedLocals`,
   `noUnusedParameters`. Do not loosen a tsconfig to make an error go away.
 - **Filenames kebab-case**, enforced by Oxlint.
+- **Put a file where files of its kind already live.** Read the existing layout
+  before creating a file or folder, and don't invent a new folder for one tool
+  or one file when an established home fits. Database files belong to
+  `packages/db`: every hand-written `.sql` goes in `packages/db/sql/` (custom
+  migration sources and the container init `postgres-init.sql` alike),
+  generated migrations in `packages/db/drizzle/`, schema in
+  `packages/db/src/schema/`. If no existing home fits, ask before adding one.
 - **Don't relitigate a LOCKED decision** in `docs/04-decisions-log.md` without
   saying explicitly that you are doing so, and why.
 

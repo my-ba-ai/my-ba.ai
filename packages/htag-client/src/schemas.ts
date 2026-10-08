@@ -137,7 +137,29 @@ export const HTAG_TREND_ROW_SCHEMAS = {
   vacancy: vacancyTrendRecordSchema,
 } as const
 
+/**
+ * `GET /reference/concordance/sal-to-locality` (P1-10, D72). Spec component
+ * `SalToLocalityResponse`. A bare object, not a `{ results }` page. `postcode`
+ * and `state_pid` are nullable in the spec. Observed (2026-10-08, via the HtAG
+ * connector): `SAL13714` → `{ loc_pid: "NSW3733", name: "SURRY HILLS",
+ * postcode: "2010", state_pid: "1" }`. Names come back upper-case.
+ */
+export const salToLocalityRecordSchema = z.object({
+  sal_code_2021: z.string().regex(/^SAL\d{5}$/),
+  loc_pid: z.string().min(1),
+  name: z.string().min(1),
+  postcode: text,
+  state_pid: text,
+})
+
+/** `SAL13714` or `13714` → `SAL13714`. Anything else is rejected before a request is made. */
+export const salCodeSchema = z
+  .string()
+  .regex(/^(SAL)?\d{5}$/, "Expected an ABS 2021 SAL code like SAL13714")
+  .transform((value) => (value.startsWith("SAL") ? value : `SAL${value}`))
+
 export type MarketQueryRow = z.infer<typeof marketQueryRecordSchema>
+export type SalToLocalityRow = z.infer<typeof salToLocalityRecordSchema>
 export type MarketSummaryRow = z.infer<typeof marketSummaryRecordSchema>
 export type HtagTrendRow<M extends keyof typeof HTAG_TREND_ROW_SCHEMAS> = z.infer<
   (typeof HTAG_TREND_ROW_SCHEMAS)[M]

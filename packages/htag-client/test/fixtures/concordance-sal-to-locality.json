@@ -1,0 +1,28 @@
+{
+  "name": "concordance-sal-to-locality",
+  "synthetic": false,
+  "capturedAt": "2026-10-08T04:32:15Z",
+  "request": {
+    "method": "GET",
+    "path": "/reference/concordance/sal-to-locality",
+    "query": "sal_code=SAL13714",
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "1",
+    "x-billing-units": "1",
+    "x-billing-tier": "free",
+    "x-billing-cost": "0",
+    "x-billing-balance": "24.334",
+    "x-billing-free-remaining": "21"
+  },
+  "body": {
+    "sal_code_2021": "SAL13714",
+    "loc_pid": "NSW3733",
+    "name": "SURRY HILLS",
+    "postcode": "2010",
+    "state_pid": "1"
+  }
+}

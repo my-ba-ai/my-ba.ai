@@ -1,0 +1,1203 @@
+{
+  "id": "74097f81-e0fe-4af8-81d3-acd09f52d06b",
+  "prevId": "8554c230-2e52-448a-8799-3de6c5981933",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.abs_sal_tenure": {
+      "name": "abs_sal_tenure",
+      "schema": "",
+      "columns": {
+        "sal_code": {
+          "name": "sal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "census_year": {
+          "name": "census_year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'00000000-0000-0000-0000-000000000000'"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "au_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rented_dwellings": {
+          "name": "rented_dwellings",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenure_not_stated": {
+          "name": "tenure_not_stated",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occupied_private_dwellings": {
+          "name": "occupied_private_dwellings",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "renter_proportion": {
+          "name": "renter_proportion",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_sha256": {
+          "name": "source_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "loaded_at": {
+          "name": "loaded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "abs_sal_tenure_tenant_id_idx": {
+          "name": "abs_sal_tenure_tenant_id_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "abs_sal_tenure_tenant_id_tenants_id_fk": {
+          "name": "abs_sal_tenure_tenant_id_tenants_id_fk",
+          "tableFrom": "abs_sal_tenure",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "abs_sal_tenure_pkey": {
+          "name": "abs_sal_tenure_pkey",
+          "columns": [
+            "sal_code",
+            "census_year"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "abs_sal_tenure_system_tenant_only": {
+          "name": "abs_sal_tenure_system_tenant_only",
+          "value": "\"abs_sal_tenure\".\"tenant_id\" = '00000000-0000-0000-0000-000000000000'::uuid"
+        },
+        "abs_sal_tenure_sal_code_check": {
+          "name": "abs_sal_tenure_sal_code_check",
+          "value": "\"abs_sal_tenure\".\"sal_code\" ~ '^SAL[0-9]{5}$'"
+        },
+        "abs_sal_tenure_counts_check": {
+          "name": "abs_sal_tenure_counts_check",
+          "value": "\"abs_sal_tenure\".\"rented_dwellings\" >= 0 and \"abs_sal_tenure\".\"tenure_not_stated\" >= 0 and \"abs_sal_tenure\".\"occupied_private_dwellings\" >= 0"
+        },
+        "abs_sal_tenure_renter_proportion_check": {
+          "name": "abs_sal_tenure_renter_proportion_check",
+          "value": "\"abs_sal_tenure\".\"renter_proportion\" is null or (\"abs_sal_tenure\".\"renter_proportion\" >= 0 and \"abs_sal_tenure\".\"renter_proportion\" <= 1)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.htag_calls": {
+      "name": "htag_calls",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task_id": {
+          "name": "task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "analysis_step_id": {
+          "name": "analysis_step_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_json": {
+          "name": "request_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rows_returned": {
+          "name": "rows_returned",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "tier": {
+          "name": "tier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cost_aud": {
+          "name": "cost_aud",
+          "type": "numeric(10, 4)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "cost_source": {
+          "name": "cost_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "billed_units": {
+          "name": "billed_units",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "billing_balance_aud": {
+          "name": "billing_balance_aud",
+          "type": "numeric(12, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "billing_tier": {
+          "name": "billing_tier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_code": {
+          "name": "status_code",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "htag_calls_tenant_id_idx": {
+          "name": "htag_calls_tenant_id_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "htag_calls_task_id_idx": {
+          "name": "htag_calls_task_id_idx",
+          "columns": [
+            {
+              "expression": "task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "htag_calls_analysis_step_id_idx": {
+          "name": "htag_calls_analysis_step_id_idx",
+          "columns": [
+            {
+              "expression": "analysis_step_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "htag_calls_created_at_idx": {
+          "name": "htag_calls_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "htag_calls_tenant_id_tenants_id_fk": {
+          "name": "htag_calls_tenant_id_tenants_id_fk",
+          "tableFrom": "htag_calls",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "htag_calls_task_id_purchase_tasks_id_fk": {
+          "name": "htag_calls_task_id_purchase_tasks_id_fk",
+          "tableFrom": "htag_calls",
+          "columnsFrom": [
+            "task_id"
+          ],
+          "tableTo": "purchase_tasks",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "set null"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "htag_calls_tier_check": {
+          "name": "htag_calls_tier_check",
+          "value": "\"htag_calls\".\"tier\" in ('reference', 'standard', 'enhanced', 'premium', 'restricted', 'agent')"
+        },
+        "htag_calls_rows_returned_check": {
+          "name": "htag_calls_rows_returned_check",
+          "value": "\"htag_calls\".\"rows_returned\" >= 0"
+        },
+        "htag_calls_cost_aud_check": {
+          "name": "htag_calls_cost_aud_check",
+          "value": "\"htag_calls\".\"cost_aud\" >= 0"
+        },
+        "htag_calls_cost_source_check": {
+          "name": "htag_calls_cost_source_check",
+          "value": "\"htag_calls\".\"cost_source\" in ('header', 'config_estimate', 'none')"
+        },
+        "htag_calls_billing_tier_check": {
+          "name": "htag_calls_billing_tier_check",
+          "value": "\"htag_calls\".\"billing_tier\" is null or \"htag_calls\".\"billing_tier\" in ('free', 'tier1', 'tier2', 'tier3')"
+        },
+        "htag_calls_billed_units_check": {
+          "name": "htag_calls_billed_units_check",
+          "value": "\"htag_calls\".\"billed_units\" is null or \"htag_calls\".\"billed_units\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.purchase_tasks": {
+      "name": "purchase_tasks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "task_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "criteria": {
+          "name": "criteria",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "locked_at": {
+          "name": "locked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "locked_snapshot_id": {
+          "name": "locked_snapshot_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cloned_from_task_id": {
+          "name": "cloned_from_task_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "purchase_tasks_tenant_id_idx": {
+          "name": "purchase_tasks_tenant_id_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_tasks_user_id_idx": {
+          "name": "purchase_tasks_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_tasks_tenant_id_status_idx": {
+          "name": "purchase_tasks_tenant_id_status_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "purchase_tasks_cloned_from_task_id_idx": {
+          "name": "purchase_tasks_cloned_from_task_id_idx",
+          "columns": [
+            {
+              "expression": "cloned_from_task_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "purchase_tasks_tenant_id_tenants_id_fk": {
+          "name": "purchase_tasks_tenant_id_tenants_id_fk",
+          "tableFrom": "purchase_tasks",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "purchase_tasks_user_id_users_id_fk": {
+          "name": "purchase_tasks_user_id_users_id_fk",
+          "tableFrom": "purchase_tasks",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "purchase_tasks_cloned_from_task_id_purchase_tasks_id_fk": {
+          "name": "purchase_tasks_cloned_from_task_id_purchase_tasks_id_fk",
+          "tableFrom": "purchase_tasks",
+          "columnsFrom": [
+            "cloned_from_task_id"
+          ],
+          "tableTo": "purchase_tasks",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "set null"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.suburb_metrics_ts": {
+      "name": "suburb_metrics_ts",
+      "schema": "",
+      "columns": {
+        "suburb_id": {
+          "name": "suburb_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'00000000-0000-0000-0000-000000000000'"
+        },
+        "property_type": {
+          "name": "property_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bedrooms": {
+          "name": "bedrooms",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'All'"
+        },
+        "metric_name": {
+          "name": "metric_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "measured_at": {
+          "name": "measured_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "confidence": {
+          "name": "confidence",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'HTAG'"
+        }
+      },
+      "indexes": {
+        "suburb_metrics_ts_measured_at_idx": {
+          "name": "suburb_metrics_ts_measured_at_idx",
+          "columns": [
+            {
+              "expression": "measured_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "suburb_metrics_ts_metric_name_measured_at_idx": {
+          "name": "suburb_metrics_ts_metric_name_measured_at_idx",
+          "columns": [
+            {
+              "expression": "metric_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "measured_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "suburb_metrics_ts_tenant_id_idx": {
+          "name": "suburb_metrics_ts_tenant_id_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "suburb_metrics_ts_suburb_id_suburbs_id_fk": {
+          "name": "suburb_metrics_ts_suburb_id_suburbs_id_fk",
+          "tableFrom": "suburb_metrics_ts",
+          "columnsFrom": [
+            "suburb_id"
+          ],
+          "tableTo": "suburbs",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "suburb_metrics_ts_tenant_id_tenants_id_fk": {
+          "name": "suburb_metrics_ts_tenant_id_tenants_id_fk",
+          "tableFrom": "suburb_metrics_ts",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "suburb_metrics_ts_pkey": {
+          "name": "suburb_metrics_ts_pkey",
+          "columns": [
+            "suburb_id",
+            "property_type",
+            "bedrooms",
+            "metric_name",
+            "measured_at"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "suburb_metrics_ts_system_tenant_only": {
+          "name": "suburb_metrics_ts_system_tenant_only",
+          "value": "\"suburb_metrics_ts\".\"tenant_id\" = '00000000-0000-0000-0000-000000000000'::uuid"
+        },
+        "suburb_metrics_ts_property_type_check": {
+          "name": "suburb_metrics_ts_property_type_check",
+          "value": "\"suburb_metrics_ts\".\"property_type\" in ('house', 'unit')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.suburbs": {
+      "name": "suburbs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'00000000-0000-0000-0000-000000000000'"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "au_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "postcode": {
+          "name": "postcode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "h3_index": {
+          "name": "h3_index",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "htag_area_id": {
+          "name": "htag_area_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abs_sal_code": {
+          "name": "abs_sal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abs_sal_match": {
+          "name": "abs_sal_match",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "domain_id": {
+          "name": "domain_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "suburbs_tenant_state_postcode_name_key": {
+          "name": "suburbs_tenant_state_postcode_name_key",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "postcode",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "suburbs_tenant_htag_area_id_key": {
+          "name": "suburbs_tenant_htag_area_id_key",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "htag_area_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "suburbs_abs_sal_code_idx": {
+          "name": "suburbs_abs_sal_code_idx",
+          "columns": [
+            {
+              "expression": "abs_sal_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "suburbs_domain_id_idx": {
+          "name": "suburbs_domain_id_idx",
+          "columns": [
+            {
+              "expression": "domain_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "suburbs_h3_index_idx": {
+          "name": "suburbs_h3_index_idx",
+          "columns": [
+            {
+              "expression": "h3_index",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "suburbs_tenant_id_idx": {
+          "name": "suburbs_tenant_id_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "suburbs_tenant_id_tenants_id_fk": {
+          "name": "suburbs_tenant_id_tenants_id_fk",
+          "tableFrom": "suburbs",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "suburbs_abs_sal_match_check": {
+          "name": "suburbs_abs_sal_match_check",
+          "value": "\"suburbs\".\"abs_sal_match\" is null or \"suburbs\".\"abs_sal_match\" in ('name', 'htag_concordance', 'unmatched')"
+        },
+        "suburbs_abs_sal_code_match_check": {
+          "name": "suburbs_abs_sal_code_match_check",
+          "value": "(\"suburbs\".\"abs_sal_code\" is not null) = coalesce(\"suburbs\".\"abs_sal_match\" in ('name', 'htag_concordance'), false)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tenants": {
+      "name": "tenants",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tenants_slug_unique": {
+          "name": "tenants_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_auth_id": {
+          "name": "external_auth_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "user_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'investor'"
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "users_external_auth_id_key": {
+          "name": "users_external_auth_id_key",
+          "columns": [
+            {
+              "expression": "external_auth_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "users_tenant_id_email_key": {
+          "name": "users_tenant_id_email_key",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "users_tenant_id_idx": {
+          "name": "users_tenant_id_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "users_tenant_id_tenants_id_fk": {
+          "name": "users_tenant_id_tenants_id_fk",
+          "tableFrom": "users",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenants",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.agent_type": {
+      "name": "agent_type",
+      "schema": "public",
+      "values": [
+        "SUBURB_SCREENER",
+        "TREND_ANALYSER",
+        "GROWTH_ANALYSER",
+        "PROPERTY_SCOUT",
+        "AGENT_DISCOVERY",
+        "OUTREACH_COORDINATOR"
+      ]
+    },
+    "public.au_state": {
+      "name": "au_state",
+      "schema": "public",
+      "values": [
+        "NSW",
+        "VIC",
+        "QLD",
+        "WA",
+        "SA",
+        "TAS",
+        "ACT",
+        "NT"
+      ]
+    },
+    "public.task_status": {
+      "name": "task_status",
+      "schema": "public",
+      "values": [
+        "DRAFT",
+        "SCREENING",
+        "TREND_ANALYSIS",
+        "GROWTH_ANALYSIS",
+        "PROPERTY_SCOUTING",
+        "AGENT_DISCOVERY",
+        "CONTACT_AGENT",
+        "IN_PROGRESS",
+        "CLOSED"
+      ]
+    },
+    "public.user_role": {
+      "name": "user_role",
+      "schema": "public",
+      "values": [
+        "investor",
+        "agent",
+        "admin"
+      ]
+    }
+  },
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

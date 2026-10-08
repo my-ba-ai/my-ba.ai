@@ -1,0 +1,24 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "my-ba (postgres, owner: bypasses RLS)",
+      "Group": "my-ba local",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "my_ba",
+      "Username": "postgres",
+      "SSLMode": "disable",
+      "Comment": "Schema owner and superuser: every row in every tenant, RLS ignored. Use for browsing."
+    },
+    "2": {
+      "Name": "my-ba (my_ba_app, RLS enforced)",
+      "Group": "my-ba local",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "my_ba",
+      "Username": "my_ba_app",
+      "SSLMode": "disable",
+      "Comment": "The app role. Sees nothing until app.tenant_id is set in the same transaction; see README (pgAdmin)."
+    }
+  }
+}

@@ -9,12 +9,18 @@
 #     query page 3 rows × Premium $0.121 · summary 2 × Standard $0.031 ·
 #     price/rent/yield 3 × Reference $0.002 each · SOM/DOM/vacancy 3 × Restricted $0.222 each.
 #   Zero-row probes and 4xx responses are free (spec: non-2xx not charged).
+#   P1-10 adds two concordance calls: one Reference row (≤ $0.002) and an
+#   unknown-code probe (expected 404, free).
+# - HTAG_CAPTURE_ONLY=<regex> captures only fixtures whose name matches, e.g.
+#   HTAG_CAPTURE_ONLY='^concordance-' to add the P1-10 fixtures without
+#   re-billing the rest.
 # - Writes one JSON file per call: { name, synthetic, capturedAt, request, status, headers, body }.
 set -euo pipefail
 
 BASE_URL="${HTAG_BASE_URL:-https://api.htagai.com/v1}"
 OUT_DIR="${HTAG_FIXTURE_DIR:-packages/htag-client/test/fixtures}"
 AREA="${HTAG_FIXTURE_AREA:-ACT101}"
+ONLY="${HTAG_CAPTURE_ONLY:-}"
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
 
@@ -30,6 +36,7 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 capture() {
   local name="$1" method="$2" path="$3" query="$4" body="$5" key="${6:-${HTAG_API_KEY:-}}"
   local url="$BASE_URL$path${query:+?$query}"
+  if [[ -n "$ONLY" && ! "$name" =~ $ONLY ]]; then return 0; fi
   echo "→ $name: $method $path${query:+?$query}"
   [[ "$DRY_RUN" == true ]] && return 0
 
@@ -78,6 +85,10 @@ done
 for m in stock-on-market days-on-market vacancy; do
   capture "trends-$m"        GET  "/markets/trends/$m" "level=suburb&area_id=$AREA&property_type=house&limit=3" ""
 done
+
+# P1-10 (D72): bare-object response; an unknown code settles what "no locality" looks like.
+capture concordance-sal-to-locality         GET /reference/concordance/sal-to-locality "sal_code=SAL13714" ""
+capture concordance-sal-to-locality-unknown GET /reference/concordance/sal-to-locality "sal_code=SAL99999" ""
 
 if [[ "$DRY_RUN" == false ]]; then
   # Belt and braces: the key must not appear anywhere in the fixtures.

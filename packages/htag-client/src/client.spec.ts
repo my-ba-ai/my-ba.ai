@@ -15,7 +15,9 @@ import {
   HtagBalanceExhaustedError,
   HtagNetworkError,
   HtagQuotaExceededError,
+  HtagResponseError,
   HtagServerError,
+  HtagUnexpectedStatusError,
 } from "./errors"
 
 const respond = (name: string, overrides?: Parameters<typeof toResponse>[1]) => () =>
@@ -488,5 +490,73 @@ describe("ledger failure (AC 9, D63)", () => {
         message: "Failed to record HtAG call in the spend ledger; continuing",
       }),
     )
+  })
+})
+
+const fixture = () => loadFixture("concordance-sal-to-locality")
+
+describe("salToLocality (P1-10, D72)", () => {
+  it("sends sal_code, parses the bare object and records one Reference row", async () => {
+    const { fetch, calls } = sequence(() => toResponse(fixture()))
+    const { client, recorder } = makeClient(fetch)
+
+    const row = await client.salToLocality("13714")
+
+    expect(row).toEqual({
+      sal_code_2021: "SAL13714",
+      loc_pid: "NSW3733",
+      name: "SURRY HILLS",
+      postcode: "2010",
+      state_pid: "1",
+    })
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.url.pathname).toMatch(/\/reference\/concordance\/sal-to-locality$/)
+    expect(calls[0]?.url.searchParams.get("sal_code")).toBe("SAL13714")
+    expect(recorder.calls).toEqual([
+      expect.objectContaining({
+        endpoint: "/reference/concordance/sal-to-locality",
+        tier: "reference",
+        statusCode: 200,
+        rowsReturned: 1,
+        // Captured inside the free allowance: one billed unit at $0.
+        costAud: "0",
+        costSource: "header",
+        billedUnits: 1,
+      }),
+    ])
+  })
+
+  it("rejects a malformed code before any request", async () => {
+    const { fetch, calls } = sequence()
+    const { client } = makeClient(fetch)
+    await expect(client.salToLocality("NSW3733")).rejects.toThrow()
+    expect(calls).toHaveLength(0)
+  })
+
+  it("404 (captured for SAL99999) → null, recorded unbilled", async () => {
+    const { fetch } = sequence(respond("concordance-sal-to-locality-unknown"))
+    const { client, recorder } = makeClient(fetch)
+    await expect(client.salToLocality("SAL99999")).resolves.toBeNull()
+    expect(recorder.calls).toEqual([expect.objectContaining({ statusCode: 404, costAud: "0" })])
+  })
+
+  it("other 4xx still throws", async () => {
+    const { fetch } = sequence(() => toResponse({ ...fixture(), status: 418, body: {} }))
+    const { client } = makeClient(fetch)
+    await expect(client.salToLocality("SAL13714")).rejects.toBeInstanceOf(HtagUnexpectedStatusError)
+  })
+
+  it("a 2xx body that fails validation throws (retryable), never null like a 404", async () => {
+    const { fetch } = sequence(() => toResponse(fixture(), { body: { loc_pid: "NSW3733" } }))
+    const { client, recorder } = makeClient(fetch)
+    await expect(client.salToLocality("SAL13714")).rejects.toBeInstanceOf(HtagResponseError)
+    expect(recorder.calls).toEqual([expect.objectContaining({ statusCode: 200, rowsReturned: 1 })])
+  })
+
+  it("a list-shaped body is an HtagResponseError, still recorded", async () => {
+    const { fetch } = sequence(() => toResponse(fixture(), { body: [] }))
+    const { client, recorder } = makeClient(fetch)
+    await expect(client.salToLocality("SAL13714")).rejects.toThrow(/HtAG/)
+    expect(recorder.calls).toHaveLength(1)
   })
 })
