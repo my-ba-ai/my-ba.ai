@@ -68,6 +68,13 @@ export async function loadSalNameIndex(
       .from(absSalTenure)
       .where(eq(absSalTenure.censusYear, censusYear)),
   )
+
+  if (rows.length === 0) {
+    throw new Error(
+      `No ABS SAL names loaded for Census ${censusYear}; run pnpm abs:load before resolving suburbs.`,
+    )
+  }
+
   return buildSalNameIndex(rows)
 }
 

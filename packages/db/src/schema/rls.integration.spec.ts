@@ -9,7 +9,7 @@ import { loadEnvFiles, parseDbEnv } from "../env"
  * `abs_sal_tenure` first went out (empty 0015). This makes the omission fail
  * CI instead. `suburb_metrics_ts` is the one sanctioned exception (D43).
  */
-const NO_RLS_BY_DESIGN = ["suburb_metrics_ts"]
+const NO_RLS_BY_DESIGN = new Set(["suburb_metrics_ts"])
 
 let pool: DatabasePool
 let db: Database
@@ -37,7 +37,7 @@ describe("row-level security coverage", () => {
       where n.nspname = 'public' and c.relkind in ('r', 'p')
       order by c.relname`)
     const missing = result.rows
-      .filter((row) => !NO_RLS_BY_DESIGN.includes(row.table))
+      .filter((row) => !NO_RLS_BY_DESIGN.has(row.table))
       .filter((row) => !row.enabled || !row.forced)
       .map((row) => row.table)
     expect(result.rows.map((row) => row.table)).toContain("abs_sal_tenure")
