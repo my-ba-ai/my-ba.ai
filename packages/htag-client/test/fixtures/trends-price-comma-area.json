@@ -1,0 +1,25 @@
+{
+  "name": "trends-price-comma-area",
+  "synthetic": false,
+  "capturedAt": "2026-10-12T02:43:22Z",
+  "request": {
+    "method": "GET",
+    "path": "/markets/trends/price",
+    "query": "level=suburb&area_id=QLD1090,QLD1625&property_type=house&bedrooms=All&period_end_min=2026-08-01&limit=10",
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "0",
+    "x-billing-units": "0",
+    "x-billing-tier": "free",
+    "x-billing-cost": "0",
+    "x-billing-balance": "14.428",
+    "x-billing-free-remaining": "0"
+  },
+  "body": {
+    "results": [],
+    "total": 0
+  }
+}

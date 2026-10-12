@@ -233,4 +233,18 @@ Phase 1 — HtAG Integration + Suburb Screener:
   measured on P1-4's first real screen. `pnpm check` and
   `pnpm test:integration` pass (2026-10-08).
 
-Next up: **P1-4** (screener, D73).
+- **P1-4 complete (pending PR CI):** the Suburb Screener. A `screening`
+  stage in `@my-ba/orchestrator` (screen → too-broad / approval gates, looping
+  in one thread on adjust, D74) runs the compiled query, upserts suburbs with
+  SAL link and postcode, hydrates price / rent / yield history cache-first,
+  joins ABS renter share, ranks with P1-8 and adds supply detail for the top N.
+  New `analysis_steps` and `screening_results` tables (cost summed from
+  `htag_calls`), a `screening` BullMQ processor, a dev-only
+  `POST /api/dev/screening/:taskId` (`DEV_SCREENING_TRIGGER=1`) and a dev stage
+  CLI for resume until P1-6. Migrations `0016`–`0017`. Verified on real HtAG
+  data (2026-10-12): empty, too-broad, ranked and repeat (cache-hit) screens,
+  plus a resumed loop; the first ranked screen found and fixed a comma-joined
+  `area_id` bug in the client (Q13e). Closes P1-10 AC 1 (renter coverage 1.0).
+  `pnpm check` and `pnpm test:integration` pass.
+
+Next up: **P1-5** (approval UI) and **P1-6** (run, status sync, resume endpoint).

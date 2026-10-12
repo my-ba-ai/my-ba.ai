@@ -9,7 +9,7 @@ export const htagCallScopeSchema = z.object({
   tenantId: z.uuid(),
   /** Null for calls made outside a task. */
   taskId: z.uuid().nullable().default(null),
-  /** Null until `analysis_steps` exists (P1-4 / P1-6). */
+  /** The `analysis_steps` row paying for these calls (P1-4). Null outside a step. */
   analysisStepId: z.uuid().nullable().default(null),
 })
 

@@ -19,8 +19,10 @@ describe("schema", () => {
   it("exports every table", () => {
     expect(tables.map(getTableName).toSorted()).toEqual([
       "abs_sal_tenure",
+      "analysis_steps",
       "htag_calls",
       "purchase_tasks",
+      "screening_results",
       "suburb_metrics_ts",
       "suburbs",
       "tenants",

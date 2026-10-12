@@ -13,7 +13,7 @@ export const BULL_BOARD_PATH = `/${API_PREFIX}/admin/queues`
 const MIN_PASSWORD_LENGTH = 12
 
 /** Queues shown in the board. Keep in step with `QueueModule`'s registrations. */
-const BOARD_QUEUES = [QUEUE_NAMES.DIAGNOSTICS] as const
+const BOARD_QUEUES = [QUEUE_NAMES.DIAGNOSTICS, QUEUE_NAMES.SCREENING] as const
 
 export type BullBoardDecision =
   | { mount: true; credentials: BasicAuthCredentials }

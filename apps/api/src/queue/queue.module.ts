@@ -34,6 +34,7 @@ import { redisUrlFrom } from "../redis/redis.module"
       }),
     }),
     BullModule.registerQueue({ name: QUEUE_NAMES.DIAGNOSTICS }),
+    BullModule.registerQueue({ name: QUEUE_NAMES.SCREENING }),
   ],
   exports: [BullModule],
 })

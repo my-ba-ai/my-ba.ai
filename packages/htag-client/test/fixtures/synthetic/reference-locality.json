@@ -1,0 +1,26 @@
+{
+  "name": "reference-locality",
+  "synthetic": true,
+  "note": "Body observed 2026-10-09 through the HtAG MCP connector (lookup_localities, loc_pid=NSW3330), which hides response headers. A comma-list loc_pid (NSW3330,QLD2659) returned { results: [], total: 0 }: the filter is exact-match, one value. Replace with a captured fixture: HTAG_CAPTURE_ONLY='^reference-' scripts/htag/capture-fixtures.sh.",
+  "request": {
+    "method": "GET",
+    "path": "/reference/locality",
+    "query": "loc_pid=NSW3330&limit=1",
+    "body": null
+  },
+  "status": 200,
+  "headers": { "content-type": "application/json" },
+  "body": {
+    "results": [
+      {
+        "loc_pid": "NSW3330",
+        "locality": "RABY",
+        "postcode": "2566",
+        "state_name": "NSW",
+        "suburb_key": "raby-nsw-2566",
+        "lga_pid_ref": "NSW272"
+      }
+    ],
+    "total": 1
+  }
+}

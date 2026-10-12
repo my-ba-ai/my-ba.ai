@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest"
 import type { z } from "zod"
 import { capturedFixtures, loadOpenApi } from "../test/helpers"
-import { HTAG_ENDPOINT_TIERS, HTAG_QUERY_PATH, HTAG_SAL_TO_LOCALITY_PATH } from "./endpoints"
+import {
+  HTAG_ENDPOINT_TIERS,
+  HTAG_LOCALITY_PATH,
+  HTAG_QUERY_PATH,
+  HTAG_SAL_TO_LOCALITY_PATH,
+} from "./endpoints"
 import {
   daysOnMarketTrendRecordSchema,
   htagEnvelopeSchema,
+  localityRecordSchema,
   marketQueryRecordSchema,
   marketSummaryRecordSchema,
   priceTrendRecordSchema,
@@ -31,6 +37,7 @@ const ROW_SCHEMAS: Record<string, z.ZodObject> = {
   DaysOnMarketTrendRecord: daysOnMarketTrendRecordSchema,
   VacancyTrendRecord: vacancyTrendRecordSchema,
   SalToLocalityResponse: salToLocalityRecordSchema,
+  LocalityRecord: localityRecordSchema,
 }
 
 /** Where the live API (captured fixtures) contradicts the spec: spec field → live field. */
@@ -61,6 +68,7 @@ const schemaFor = (path: string) => {
   if (path === HTAG_QUERY_PATH) return marketQueryRecordSchema
   if (path === "/markets/summary") return marketSummaryRecordSchema
   if (path === HTAG_SAL_TO_LOCALITY_PATH) return salToLocalityRecordSchema
+  if (path === HTAG_LOCALITY_PATH) return localityRecordSchema
   const metric = path.replace("/markets/trends/", "")
   return {
     price: priceTrendRecordSchema,

@@ -133,7 +133,7 @@ describe("contract: captured fixtures (AC 1)", () => {
     expect(rows[2]).toMatchObject({ period_end: "2026-06-30", som: null, som_percent: null })
   })
 
-  it("comma-joins area_id, repeats property_type and sends the key only as a header", async () => {
+  it("repeats area_id and property_type and sends the key only as a header", async () => {
     const { fetch, calls } = sequence(respond("trends-price"))
     const { client, recorder } = makeClient(fetch)
 
@@ -145,13 +145,19 @@ describe("contract: captured fixtures (AC 1)", () => {
     })
 
     const url = calls[0]?.url
-    expect(url?.searchParams.get("area_id")).toBe("ACT101,ACT102")
+    // Repeated, never comma-joined: a comma-joined area_id matches nothing (Q13e).
+    expect(url?.searchParams.getAll("area_id")).toEqual(["ACT101", "ACT102"])
     expect(url?.searchParams.getAll("property_type")).toEqual(["house", "unit"])
     expect(url?.searchParams.get("period_end_min")).toBe("2026-01-01")
     expect(url?.searchParams.has("bedrooms")).toBe(false)
     expect(new Headers(calls[0]?.init.headers).get("x-api-key")).toBe(TEST_API_KEY)
     expect(url?.toString()).not.toContain(TEST_API_KEY)
     expect(JSON.stringify(recorder.calls)).not.toContain(TEST_API_KEY)
+    // The ledger keeps every repeated value.
+    expect(recorder.calls[0]?.request).toMatchObject({
+      area_id: ["ACT101", "ACT102"],
+      property_type: ["house", "unit"],
+    })
   })
 })
 
@@ -558,5 +564,60 @@ describe("salToLocality (P1-10, D72)", () => {
     const { client, recorder } = makeClient(fetch)
     await expect(client.salToLocality("SAL13714")).rejects.toThrow(/HtAG/)
     expect(recorder.calls).toHaveLength(1)
+  })
+})
+
+const localityFixture = () => loadFixture("reference-locality")
+
+describe("locality (P1-4, D73)", () => {
+  it("sends one exact loc_pid with limit 1 and returns the matching row", async () => {
+    const { fetch, calls } = sequence(() => toResponse(localityFixture()))
+    const { client, recorder } = makeClient(fetch)
+
+    const row = await client.locality("NSW3330")
+
+    expect(row).toEqual({
+      loc_pid: "NSW3330",
+      locality: "RABY",
+      postcode: "2566",
+      state_name: "NSW",
+      suburb_key: "raby-nsw-2566",
+      lga_pid_ref: "NSW272",
+    })
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.url.pathname).toMatch(/\/reference\/locality$/)
+    expect(calls[0]?.url.searchParams.get("loc_pid")).toBe("NSW3330")
+    expect(calls[0]?.url.searchParams.get("limit")).toBe("1")
+    expect(recorder.calls).toEqual([
+      expect.objectContaining({
+        endpoint: "/reference/locality",
+        tier: "reference",
+        // Captured inside the free allowance: billed per request, one unit at $0.
+        costAud: "0",
+        costSource: "header",
+        billedUnits: 1,
+      }),
+    ])
+  })
+
+  it("a comma-list matches nothing (captured): no row → null, still recorded", async () => {
+    const { fetch } = sequence(() => toResponse(loadFixture("reference-locality-comma-list")))
+    const { client, recorder } = makeClient(fetch)
+    await expect(client.locality("NSW3330")).resolves.toBeNull()
+    expect(recorder.calls).toHaveLength(1)
+  })
+
+  it("ignores a row for a different loc_pid", async () => {
+    const { fetch } = sequence(() => toResponse(localityFixture()))
+    const { client } = makeClient(fetch)
+    await expect(client.locality("QLD2659")).resolves.toBeNull()
+  })
+
+  it("rejects a comma-list or malformed id before any request", async () => {
+    const { fetch, calls } = sequence()
+    const { client } = makeClient(fetch)
+    await expect(client.locality("NSW3330,QLD2659")).rejects.toThrow()
+    await expect(client.locality("raby")).rejects.toThrow()
+    expect(calls).toHaveLength(0)
   })
 })

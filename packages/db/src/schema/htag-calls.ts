@@ -11,6 +11,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core"
+import { analysisSteps } from "./analysis-steps"
 import { purchaseTasks } from "./purchase-tasks"
 import { tenants } from "./tenants"
 
@@ -27,9 +28,7 @@ const costSourceList = sqlList(HTAG_COST_SOURCES)
  *
  * Tenant-owned, with ordinary tenant-isolation RLS (migration 0012).
  *
- * `analysis_step_id` has no foreign key yet: `analysis_steps` does not exist.
- * The migration that creates it adds the constraint — same pattern as
- * `purchase_tasks.locked_snapshot_id`.
+ * `analysis_step_id` gained its foreign key in P1-4, with the table it points at.
  */
 export const htagCalls = pgTable(
   "htag_calls",
@@ -43,8 +42,8 @@ export const htagCalls = pgTable(
      * spend record outlives the task it was spent on.
      */
     taskId: uuid().references(() => purchaseTasks.id, { onDelete: "set null" }),
-    /** FK added when `analysis_steps` lands (P1-4 / P1-6). */
-    analysisStepId: uuid(),
+    /** The step that paid for this call. `set null`, like `task_id`: spend outlives the step. */
+    analysisStepId: uuid().references(() => analysisSteps.id, { onDelete: "set null" }),
     /** Path as called, e.g. `/markets/query`, `/markets/trends/price`. */
     endpoint: text().notNull(),
     /** Query params or body as sent. Never contains the API key. */

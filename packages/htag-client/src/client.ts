@@ -3,6 +3,7 @@ import type { z } from "zod"
 import { htagClientConfigSchema, type HtagClientConfig } from "./config"
 import {
   HTAG_BEDROOM_TREND_METRICS,
+  HTAG_LOCALITY_PATH,
   HTAG_QUERY_PATH,
   HTAG_SAL_TO_LOCALITY_PATH,
   HTAG_SUMMARY_PATH,
@@ -16,6 +17,8 @@ import { send, type HttpContext } from "./http"
 import { consoleHtagLogger, type HtagLogger } from "./logger"
 import {
   HTAG_TREND_ROW_SCHEMAS,
+  localityRecordSchema,
+  locPidSchema,
   marketQueryInputSchema,
   marketQueryRecordSchema,
   marketSummaryRecordSchema,
@@ -29,6 +32,7 @@ import {
   type MarketQueryInput,
   type MarketQueryRow,
   type MarketSummaryRow,
+  type LocalityRow,
   type SalToLocalityRow,
 } from "./schemas"
 
@@ -48,7 +52,11 @@ export interface HtagQueryResult extends HtagRowsResult<MarketQueryRow> {
 
 interface AreaParams {
   level: HtagLevel
-  /** Sent comma-joined as `area_id` (Q13e). */
+  /**
+   * Sent as repeated `area_id` params (the spec's array). A comma-joined
+   * single value is accepted but matches nothing on trends: 0 rows, found on
+   * P1-4's first real screen (2026-10-12, Q13e corrected).
+   */
   areaIds: readonly string[]
   /** Sent as repeated `property_type` params. Multi-value is unverified against the live API. */
   propertyTypes?: ReadonlyArray<"house" | "unit">
@@ -85,6 +93,13 @@ export interface HtagClient {
    * malformed answer must stay a retryable failure, never look like one.
    */
   salToLocality(salCode: string): Promise<SalToLocalityRow | null>
+  /**
+   * `GET /reference/locality?loc_pid=…` (P1-4, D73), for the postcode of a
+   * suburb a screen discovered. One `loc_pid` per call: the filter is
+   * exact-match, a comma-list matches nothing. Null when no row comes back.
+   * Billed per request, not per row.
+   */
+  locality(locPid: string): Promise<LocalityRow | null>
 }
 
 export interface HtagClientDeps {
@@ -134,7 +149,7 @@ function areaQuery(params: {
 }): URLSearchParams {
   const query = new URLSearchParams()
   query.set("level", params.level)
-  query.set("area_id", params.areaIds.join(","))
+  for (const id of params.areaIds) query.append("area_id", id)
   for (const type of params.propertyTypes ?? []) query.append("property_type", type)
   if (params.bedrooms) query.set("bedrooms", params.bedrooms)
   if (params.periodEndMin) query.set("period_end_min", params.periodEndMin)
@@ -235,6 +250,19 @@ export function createHtagClient(config: HtagClientConfig, deps: HtagClientDeps)
         if (error instanceof HtagUnexpectedStatusError && error.status === 404) return null
         throw error
       }
+    },
+
+    async locality(locPid) {
+      const id = locPidSchema.parse(locPid)
+      const path = HTAG_LOCALITY_PATH
+      const { results } = await send(ctx, {
+        method: "GET",
+        path,
+        tier: tierFor(path),
+        query: new URLSearchParams({ loc_pid: id, limit: "1" }),
+      })
+      const { rows } = parseRows(results, localityRecordSchema, path, logger)
+      return rows.find((row) => row.loc_pid === id) ?? null
     },
   }
 }

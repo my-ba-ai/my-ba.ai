@@ -358,6 +358,33 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 - **Measures P1-10 AC 1:** report the share of screened suburbs with a renter proportion on the first real run; < 95% reopens the name normalisation.
 - **Open questions still touching P1-4:** Q04 is config only (AC 8). Q13(i) affects estimates, not the ledger (D62). Q21 deferred: top-N gets Restricted hydration only, no flags.
 
+**Implemented (2026-10-09).** Deltas from the description above (design in D74):
+
+- **Graph:** `packages/orchestrator/src/screening/`. `screen` runs steps 1–8 (`runScreening`, `screen.ts`); `too_broad_gate` and `approval_gate` only interrupt; `finalise` emits the kept area ids. Resuming the too-broad gate (`approved: false` only) or rejecting at approval loops back to `screen` in the same thread as `attempt + 1`, re-reading criteria. `StageName` gains `screening`; `GatePayload` is a union on `kind` (spike `approval`, `SCREENING_TOO_BROAD`, `SCREENING_APPROVAL`), payload schemas in `@my-ba/shared` (`schemas/screening.ts`). `resumeStage` rejects answers a gate can't act on (`decisionFitsGate`, `InvalidGateDecisionError`).
+- **Ports:** the screener talks to `ScreeningPorts` (`ports.ts`); `createPostgresScreeningPorts` binds them to `@my-ba/db` and two HtAG clients (per step, and system-tenant for SAL and locality lookups). New `@my-ba/db` helpers in `src/screening/`: `ensureSuburb` (advisory lock per `loc_pid`, SAL + postcode before insert, adopts a pre-existing row by (state, postcode, name)), `readMetricPoints` / `upsertMetricPoints`, `beginAnalysisStep` / `completeScreeningStep` / `failAnalysisStep` / `readScreeningResults`.
+- **Schema:** `analysis_steps` (`stage`, `attempt`, `status` running/completed/failed, `outcome` too_broad/ranked, typed `failure_reason`, request/result jsonb, `cost_aud`, preset version and customised flags; unique per task × stage × attempt) and `screening_results` (rank, score, coverage, `insufficient_data`, `score_breakdown_json` = P1-8 `Ranked`, `supply_json`, `shortlisted`); `htag_calls.analysis_step_id` FK (`set null`). RLS in `packages/db/sql/analysis-steps-screening-results-rls.sql`. Migrations `0016` (generated) and `0017` (custom, RLS).
+- **HtAG client:** `locality(locPid)` for `/reference/locality` (Reference, per request), one exact `loc_pid` per call (comma-list probed: 0 rows). Captured fixtures `reference-locality` and `reference-locality-comma-list` (0 rows: comma-list confirmed on the REST API, both inside the free allowance); the synthetic one from the connector is now unused.
+- **Metrics (step 6):** growth = value at the current month ÷ value 36 (price) or 12 (rent) months earlier − 1; yield = the current month's `yield_val`; volatility per D74.
+- **Supply (step 7):** top N among suburbs with sufficient data; `som_percent`, `dom`, `vacancy_rate` at the current month, cached like the Reference series.
+- **Worker:** `ScreeningProcessor` on `QUEUE_NAMES.SCREENING` (concurrency 1), orchestrator provider with its own app-role pool; a failed stage is an `UnrecoverableError` (re-enqueue to retry). Config: `SCREEN_QUERY_LIMIT`, `SCREEN_RESTRICTED_TOP_N`, `SCREEN_TREND_BATCH_SIZE`, `SCREEN_STATES_OVERRIDE` (dev-only, AC 8).
+- **API:** `POST /api/dev/screening/:taskId` (`apps/api/src/dev-screening/`), authenticated, 404 unless `DEV_SCREENING_TRIGGER=1` outside production; 400 for non-runnable criteria; one attempt, deduplicated per task. Screening queue added to Bull Board.
+- **Tests:** `screen.spec.ts` (AC 1–8 against in-memory ports and a fake HtAG client billing at tier rates; AC 7 first run 99 suburbs ≈ $26.07, repeat ≈ $11.98), `graph.spec.ts` (approve doesn't re-run `screen`; too-broad and reject loop as attempt 2), `metrics.spec.ts`, `config.spec.ts`, `stage.spec.ts`, `client.spec.ts` (`locality`), worker `screening.processor.spec.ts`, API `dev-screening.service.spec.ts`, and `packages/db/src/screening/screening.integration.spec.ts` (advisory lock, cache upsert, step cost from the ledger, RLS, reopen after failure).
+- **Checks (Claude, 2026-10-09, real Vitest in the desktop VM after `supportedArchitectures` added Linux binaries):** typecheck clean for shared, db, htag-client, orchestrator, worker and API; oxlint 0 warnings; oxfmt clean; web/HtAG boundary clean; Vitest: orchestrator 46/46, htag-client 94/94, db 67/67 (unit), shared 38/38, worker 6/6, API 81/81. The AC 7 test first timed out at 5 s because the in-memory fake cache was O(n²); it is now keyed by Map (~0.4 s for the file).
+- **Stage CLI (dev stand-in until P1-6):** `pnpm --filter @my-ba/orchestrator stage <status|run|resume> <tenantId> <taskId> ['<decision json>']` (`src/scripts/stage.ts`), reading `apps/worker/.env`; refused in production.
+- **Bug found by the real screen (2026-10-12):** the client sent `area_id` comma-joined, which `/markets/trends/*` accepts but matches nothing, so history came back empty (coverage 0.15, every suburb insufficient). Fixed: `area_id` repeated, ledger keeps repeated params as arrays (Q13e corrected); capture script gains `trends-price-multi-area` / `-comma-area`.
+- **Known gap (follow-up, not blocking):** a supply metric HtAG returns as missing (e.g. DOM `0` → null) is never cached, so it is re-fetched on every run: one Restricted row ($0.222) per such shortlisted suburb per run. Seen on the repeat run. Fix with a "fetched, no value" marker for the period (Q24).
+
+**Verified (2026-10-12, Brian).** `0016` + `0017` migrate (after re-applying `0017`, which first ran as the empty template; `rls.integration.spec.ts` caught it). `pnpm check` and `pnpm test:integration` pass (incl. `screening.integration.spec.ts`). Real screens through the dev trigger, the worker and the stage CLI:
+
+- AC 2: NSW cashflow criteria returned 0 rows → approval gate, empty list, $0 (IRSAD ≥ 3 empties the set; Q23).
+- AC 1: QLD criteria filled `SCREEN_QUERY_LIMIT=30` → too-broad gate, one query call only ($2.66 / $3.63).
+- Loop + approval: criteria edited, resumed `{"approved":false}` → attempt 2 ranked 6 suburbs; `{"approved":true}` completed the stage with 6 area ids.
+- Ranked screen ($1.93): 37 price / 13 rent / 1 yield points per suburb written to `suburb_metrics_ts` (incl. compressed 2023 chunks), coverage 1.00, `low_volatility` enabled, top 3 shortlisted with supply detail, new suburbs with postcodes and name-matched SALs, locality lookups on the system tenant at $0. Step `cost_aud` equals its ledger rows (AC 4).
+- AC 3 / AC 7 repeat: a second task on the same suburbs made no Reference trend calls; $0.95 (query $0.73 + one uncached DOM row, see the known gap), well under ~$16.10.
+- P1-10 AC 1: renter coverage 1.0 (6 of 6; small sample).
+
+**P1-4 complete** once PR CI (`verify`, `integration`, `secrets`) is green.
+
 ### P1-5 — Approval UI
 
 **Description:** Renders both interrupt payloads.
@@ -470,7 +497,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 
 **Acceptance criteria:**
 
-1. Renter proportion available for ≥ 95% of suburbs returned by a representative screen fixture. **Measured on P1-4's first real screen (decided 2026-10-08)**, not with a paid name sample; P1-10 closes with AC 1 pending.
+1. Renter proportion available for ≥ 95% of suburbs returned by a representative screen fixture. **Measured on P1-4's first real screen (decided 2026-10-08)**, not with a paid name sample. **Met 2026-10-12: 6 of 6 suburbs (1.0)** on P1-4's first ranked screen; re-check on a larger screen.
 2. Data source recorded: DataPack name, release, table, file checksum (above). The load verifies the checksum and fails loudly on mismatch or a missing column.
 3. Idempotent re-run: a second load changes no rows; a second resolve makes no HtAG calls.
 4. Missing mapping → `renterProportion` undefined (P1-8 coverage handles it), not a failure.
@@ -489,7 +516,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 - **Name matches carry no postcode** (ABS SALs have none). Only a concordance match returns one. P1-4's postcode rule falls back to `/reference/locality` for name matches (D73).
 - **Tests:** `datapack.spec.ts` (AC 2, AC 6: definition, zero and negative denominators, perturbed > 1; readers on an in-test zip/XLSX), `sal-match.spec.ts`, `sal-resolver.spec.ts` (AC 5), `schema.spec.ts` (new CHECKs, PK), `abs.integration.spec.ts` (AC 3 idempotent load and resolve, AC 4, RLS read/write, DB CHECKs); htag-client `client.spec.ts` (salToLocality: request, ledger row, 404, bad body, list body) and `spec-contract.spec.ts` (`SalToLocalityResponse` field set, Reference tier).
 - **Pre-verification run (Claude, 2026-10-08):** `tsc` clean for `@my-ba/db` (src + specs) and `@my-ba/htag-client` (src + specs). Under Node's type stripping with a Vitest shim: db `abs` unit specs 41/41; htag-client client + contract + config 73/74. The one failure is the expected missing captured concordance fixture. A dry run against the real DataPack parses in ~1.3 s and gives Surry Hills 0.663; 138 names are ambiguous within a state. Not run here: Vitest itself, oxlint, oxfmt, migrations, the integration spec.
-- **AC 1 is deferred to P1-4's first real screen** (see AC 1).
+- **AC 1 met on P1-4's first ranked screen (2026-10-12): 1.0, 6 of 6** (see AC 1).
 
 - **Follow-up landed on this branch (2026-10-08):** an `rls.integration.spec.ts` that fails if any public table except `suburb_metrics_ts` lacks forced RLS (the first `0015` shipped empty and nothing else noticed); opt-in pgAdmin (`pnpm db:admin`, `packages/db/pgadmin-servers.json`); the container init moved from `infra/postgres/init/` to `packages/db/sql/postgres-init.sql`, `infra/` removed; an AGENTS.md rule to put files where their kind already lives.
 

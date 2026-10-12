@@ -16,7 +16,10 @@ async function bootstrap(): Promise<void> {
   // Shutdown hooks let @nestjs/bullmq close workers gracefully on SIGTERM:
   // the active job finishes (or is returned to the queue) instead of stalling.
   app.enableShutdownHooks()
-  Logger.log(`Worker context started; processing: ${QUEUE_NAMES.DIAGNOSTICS}`, "Bootstrap")
+  Logger.log(
+    `Worker context started; processing: ${QUEUE_NAMES.DIAGNOSTICS}, ${QUEUE_NAMES.SCREENING}`,
+    "Bootstrap",
+  )
 }
 
 void bootstrap()

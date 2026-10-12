@@ -2,7 +2,7 @@
   "name": "@my-ba/orchestrator",
   "version": "0.0.0",
   "private": true,
-  "description": "Stage orchestration behind the narrow runStage interface (docs/02). P0-5: LangGraph.js durable-interrupt spike.",
+  "description": "Stage orchestration behind the narrow runStage interface (docs/02). P0-5 spike graph; P1-4 screening graph.",
   "files": [
     "dist"
   ],
@@ -22,7 +22,8 @@
     "test:integration": "INTEGRATION=1 vitest run",
     "test:watch": "vitest",
     "checkpointer:setup": "tsx src/scripts/setup-checkpointer.ts",
-    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+    "clean": "rm -rf dist .turbo *.tsbuildinfo",
+    "stage": "tsx src/scripts/stage.ts"
   },
   "dependencies": {
     "@langchain/core": "^1.0.0",
@@ -30,6 +31,9 @@
     "@langchain/langgraph-checkpoint": "^1.0.0",
     "@langchain/langgraph-checkpoint-postgres": "^1.0.0",
     "@my-ba/db": "workspace:*",
+    "@my-ba/domain": "workspace:*",
+    "@my-ba/htag-client": "workspace:*",
+    "@my-ba/shared": "workspace:*",
     "pg": "^8.16.0",
     "zod": "^4.0.0"
   },

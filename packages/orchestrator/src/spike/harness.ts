@@ -27,8 +27,10 @@ function emit(value: unknown): void {
 
 async function main(): Promise<void> {
   const ref = StageRef.parse({ tenantId, taskId, stage: "spike" })
-  const orchestrator = LangGraphOrchestrator.fromEnv(process.env, (node) => {
-    if (probeFile) appendFileSync(probeFile, `${process.pid} ${node}\n`)
+  const orchestrator = LangGraphOrchestrator.fromEnv(process.env, {
+    onNodeRun: (node) => {
+      if (probeFile) appendFileSync(probeFile, `${process.pid} ${node}\n`)
+    },
   })
 
   switch (mode) {
