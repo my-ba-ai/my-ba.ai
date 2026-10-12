@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   // across server components, client components and the edge runtime.
   transpilePackages: ["@my-ba/shared"],
   typedRoutes: true,
+  experimental: {
+    agentUpgrade: "security",
+  },
 }
 
 export default nextConfig
