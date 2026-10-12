@@ -152,6 +152,25 @@ export const salToLocalityRecordSchema = z.object({
   state_pid: text,
 })
 
+/**
+ * `GET /reference/locality` (P1-4, D73). Spec component `LocalityRecord`.
+ * Observed (2026-10-09, via the HtAG connector): `NSW3330` →
+ * `{ loc_pid, locality: "RABY", postcode: "2566", state_name: "NSW", … }`.
+ */
+export const localityRecordSchema = z.object({
+  loc_pid: z.string().min(1),
+  locality: z.string().min(1),
+  postcode: text,
+  state_name: z.string().min(1),
+  suburb_key: text,
+  lga_pid_ref: text,
+})
+
+/** HtAG `loc_pid`, e.g. `NSW3330`: state prefix and digits. Checked before a billed request. */
+export const locPidSchema = z
+  .string()
+  .regex(/^[A-Z]{2,3}\d+$/, "Expected an HtAG loc_pid like NSW3330")
+
 /** `SAL13714` or `13714` → `SAL13714`. Anything else is rejected before a request is made. */
 export const salCodeSchema = z
   .string()
@@ -160,6 +179,7 @@ export const salCodeSchema = z
 
 export type MarketQueryRow = z.infer<typeof marketQueryRecordSchema>
 export type SalToLocalityRow = z.infer<typeof salToLocalityRecordSchema>
+export type LocalityRow = z.infer<typeof localityRecordSchema>
 export type MarketSummaryRow = z.infer<typeof marketSummaryRecordSchema>
 export type HtagTrendRow<M extends keyof typeof HTAG_TREND_ROW_SCHEMAS> = z.infer<
   (typeof HTAG_TREND_ROW_SCHEMAS)[M]

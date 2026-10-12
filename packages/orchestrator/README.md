@@ -24,6 +24,36 @@ pnpm db:migrate          # Drizzle journal, then PostgresSaver.setup()
 pnpm test:integration
 ```
 
+## Screening stage (P1-4, D73, D74)
+
+`src/screening/`. `screen` runs every billed step (`runScreening`); the two
+gates only interrupt; resuming the too-broad gate or rejecting the ranking
+loops back to `screen` in the same thread as the next `attempt`.
+
+```text
+START → screen ─┬─ too broad → too_broad_gate ─────────────→ screen
+                └─ ranked ───→ approval_gate ─┬─ approved → finalise → END
+                                              └─ rejected → screen
+```
+
+The screener reaches the outside world only through `ScreeningPorts`. The
+worker passes `createPostgresScreeningPorts({ db, htag })`; tests pass the
+in-memory fakes in `test/screening-fakes.ts`. Config comes from `SCREEN_*` env
+vars (`screeningConfigFromEnv`). A node failure with a typed reason
+(`StageFailedError`, e.g. `[HTAG_QUOTA_EXCEEDED]`) surfaces as
+`StageResult.failed.reason`, and `runStage` retries a failed stage from its
+checkpoint.
+
+Until P1-6 adds the resume endpoint, drive a stage from a terminal with the dev
+CLI (reads `apps/worker/.env`, spends HtAG money like the worker, refused in
+production):
+
+```bash
+pnpm --filter @my-ba/orchestrator stage status <tenantId> <taskId>
+pnpm --filter @my-ba/orchestrator stage resume <tenantId> <taskId> '{"approved":false}'
+pnpm --filter @my-ba/orchestrator stage resume <tenantId> <taskId> '{"approved":true}'
+```
+
 ## Things LangGraph.js does that the rest of the code must respect
 
 - **There is no "thread status" in the library.** That's a LangGraph Platform

@@ -1,4 +1,5 @@
 import { GatePayload, StageOutput, type StageResult } from "./stage"
+import { stageFailureReason } from "./stage-failure"
 
 /**
  * LangGraph.js has no "thread status" — that is a LangGraph Platform (server)
@@ -34,7 +35,13 @@ export function deriveStageResult(snapshot: SnapshotLike): StageResult {
 
   const failed = snapshot.tasks.find((task) => task.error !== undefined && task.error !== null)
   if (failed) {
-    return { status: "failed", error: `${failed.name}: ${errorMessage(failed.error)}` }
+    const message = errorMessage(failed.error)
+    const reason = stageFailureReason(message)
+    return {
+      status: "failed",
+      error: `${failed.name}: ${message}`,
+      ...(reason ? { reason } : {}),
+    }
   }
 
   const pending = snapshot.tasks.flatMap((task) => task.interrupts)

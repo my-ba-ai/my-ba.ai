@@ -20,6 +20,8 @@ export const HTAG_SUMMARY_PATH = "/markets/summary"
 export const trendPath = (metric: HtagTrendMetric) => `/markets/trends/${metric}`
 /** ABS SAL code → HtAG `loc_pid` (P1-10, D72). One code per call; returns a bare object, not `{ results }`. */
 export const HTAG_SAL_TO_LOCALITY_PATH = "/reference/concordance/sal-to-locality"
+/** Locality lookup (P1-4, D73): postcode for a `loc_pid`. `loc_pid` is exact-match, one value per call. */
+export const HTAG_LOCALITY_PATH = "/reference/locality"
 
 /**
  * Each endpoint's value tier, from the spec's `x-htg-pricingTier` (D61).
@@ -36,6 +38,7 @@ export const HTAG_ENDPOINT_TIERS: Readonly<Record<string, HtagTier>> = {
   [trendPath("days-on-market")]: "restricted",
   [trendPath("vacancy")]: "restricted",
   [HTAG_SAL_TO_LOCALITY_PATH]: "reference",
+  [HTAG_LOCALITY_PATH]: "reference",
 }
 
 export function tierFor(path: string): HtagTier {

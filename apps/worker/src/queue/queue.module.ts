@@ -30,6 +30,7 @@ import { parseRedisUrl, QUEUE_NAMES, QUEUE_PREFIX } from "@my-ba/shared"
       },
     }),
     BullModule.registerQueue({ name: QUEUE_NAMES.DIAGNOSTICS }),
+    BullModule.registerQueue({ name: QUEUE_NAMES.SCREENING }),
   ],
   exports: [BullModule],
 })

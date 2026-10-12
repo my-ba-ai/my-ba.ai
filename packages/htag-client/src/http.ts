@@ -48,9 +48,20 @@ export interface HtagPage {
 }
 
 /** What the ledger stores as `request_json`: params or body as sent, never the key. */
+/**
+ * What the ledger stores as the request. Repeated query params (`area_id`,
+ * `property_type`) become arrays: `Object.fromEntries` would keep only the
+ * last one and the record would misstate what was asked for.
+ */
 function requestForLedger(request: HtagRequest): Record<string, unknown> {
   if (request.body) return request.body
-  return Object.fromEntries(request.query ?? new URLSearchParams())
+  const query = request.query ?? new URLSearchParams()
+  return Object.fromEntries(
+    [...new Set(query.keys())].map((key) => {
+      const values = query.getAll(key)
+      return [key, values.length === 1 ? values[0] : values]
+    }),
+  )
 }
 
 /** The rows a 2xx body carries, or null if it is not the shape the endpoint promises. */

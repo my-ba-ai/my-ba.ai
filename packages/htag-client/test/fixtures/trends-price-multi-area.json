@@ -1,0 +1,58 @@
+{
+  "name": "trends-price-multi-area",
+  "synthetic": false,
+  "capturedAt": "2026-10-12T02:43:21Z",
+  "request": {
+    "method": "GET",
+    "path": "/markets/trends/price",
+    "query": "level=suburb&area_id=QLD1090&area_id=QLD1625&property_type=house&bedrooms=All&period_end_min=2026-08-01&limit=10",
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "0",
+    "x-billing-units": "4",
+    "x-billing-tier": "tier1",
+    "x-billing-cost": "0.0080",
+    "x-billing-balance": "14.428",
+    "x-billing-free-remaining": "0"
+  },
+  "body": {
+    "results": [
+      {
+        "area_id": "QLD1090",
+        "period_end": "2026-09-30T00:00:00+00:00",
+        "property_type": "house",
+        "bedrooms": "All",
+        "typical_price": 504354,
+        "sales": 4
+      },
+      {
+        "area_id": "QLD1625",
+        "period_end": "2026-09-30T00:00:00+00:00",
+        "property_type": "house",
+        "bedrooms": "All",
+        "typical_price": 653397,
+        "sales": 4
+      },
+      {
+        "area_id": "QLD1090",
+        "period_end": "2026-08-31T00:00:00+00:00",
+        "property_type": "house",
+        "bedrooms": "All",
+        "typical_price": 501946,
+        "sales": 4
+      },
+      {
+        "area_id": "QLD1625",
+        "period_end": "2026-08-31T00:00:00+00:00",
+        "property_type": "house",
+        "bedrooms": "All",
+        "typical_price": 649740,
+        "sales": 2
+      }
+    ],
+    "total": 4
+  }
+}

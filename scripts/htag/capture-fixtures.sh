@@ -11,8 +11,10 @@
 #   Zero-row probes and 4xx responses are free (spec: non-2xx not charged).
 #   P1-10 adds two concordance calls: one Reference row (≤ $0.002) and an
 #   unknown-code probe (expected 404, free).
+#   P1-4 adds two /reference/locality calls ($0.001 per request after 25 free
+#   a month): one loc_pid, and a comma-list that settles single-value matching.
 # - HTAG_CAPTURE_ONLY=<regex> captures only fixtures whose name matches, e.g.
-#   HTAG_CAPTURE_ONLY='^concordance-' to add the P1-10 fixtures without
+#   HTAG_CAPTURE_ONLY='^(concordance|reference)-' to add the P1-10/P1-4 fixtures without
 #   re-billing the rest.
 # - Writes one JSON file per call: { name, synthetic, capturedAt, request, status, headers, body }.
 set -euo pipefail
@@ -89,6 +91,16 @@ done
 # P1-10 (D72): bare-object response; an unknown code settles what "no locality" looks like.
 capture concordance-sal-to-locality         GET /reference/concordance/sal-to-locality "sal_code=SAL13714" ""
 capture concordance-sal-to-locality-unknown GET /reference/concordance/sal-to-locality "sal_code=SAL99999" ""
+
+# P1-4 (D73): postcode for a name-matched suburb. `loc_pid` is exact-match, one
+# value: a comma-list returned 0 rows via the HtAG connector on 2026-10-09.
+capture reference-locality            GET /reference/locality "loc_pid=NSW3330&limit=1" ""
+capture reference-locality-comma-list GET /reference/locality "loc_pid=NSW3330,QLD2659&limit=5" ""
+
+# Q13(e), corrected 2026-10-12: multi-area trends need repeated area_id; a
+# comma-joined value returns 0 rows. Six Reference rows, then a free 0-row call.
+capture trends-price-multi-area       GET /markets/trends/price "level=suburb&area_id=QLD1090&area_id=QLD1625&property_type=house&bedrooms=All&period_end_min=2026-08-01&limit=10" ""
+capture trends-price-comma-area       GET /markets/trends/price "level=suburb&area_id=QLD1090,QLD1625&property_type=house&bedrooms=All&period_end_min=2026-08-01&limit=10" ""
 
 if [[ "$DRY_RUN" == false ]]; then
   # Belt and braces: the key must not appear anywhere in the fixtures.

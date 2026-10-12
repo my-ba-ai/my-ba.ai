@@ -1,0 +1,34 @@
+{
+  "name": "reference-locality",
+  "synthetic": false,
+  "capturedAt": "2026-10-09T02:22:05Z",
+  "request": {
+    "method": "GET",
+    "path": "/reference/locality",
+    "query": "loc_pid=NSW3330&limit=1",
+    "body": null
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json",
+    "x-billing-free-granted": "1",
+    "x-billing-units": "1",
+    "x-billing-tier": "free",
+    "x-billing-cost": "0",
+    "x-billing-balance": "24.334",
+    "x-billing-free-remaining": "18"
+  },
+  "body": {
+    "results": [
+      {
+        "loc_pid": "NSW3330",
+        "locality": "RABY",
+        "postcode": "2566",
+        "state_name": "NSW",
+        "suburb_key": "raby-nsw-2566",
+        "lga_pid_ref": "NSW272"
+      }
+    ],
+    "total": 1
+  }
+}

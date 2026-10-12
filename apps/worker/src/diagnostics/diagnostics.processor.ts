@@ -16,7 +16,7 @@ import {
  * make it valid.
  *
  * A real processor would now call `withTenant(db, payload.tenantId, ...)`;
- * this one touches no data, so the worker still has no database pool.
+ * this one touches no data (see `ScreeningProcessor` for one that does).
  */
 @Processor(QUEUE_NAMES.DIAGNOSTICS)
 export class DiagnosticsProcessor extends WorkerHost {

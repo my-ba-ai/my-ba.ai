@@ -125,7 +125,8 @@ describe("P0-5: LangGraph.js durable interrupt", () => {
     const first = runHarness(["start", tenantId, taskId], probe)
     const paused = await first.result
     expect(paused).toMatchObject({ status: "awaiting_approval", gate: { kind: "approval" } })
-    const shortlist = (paused as Extract<StageResult, { status: "awaiting_approval" }>).gate.items
+    const gate = (paused as Extract<StageResult, { status: "awaiting_approval" }>).gate
+    const shortlist = gate.kind === "approval" ? gate.items : []
     expect(shortlist).toHaveLength(3)
 
     // 3. Kill it hard. No graceful shutdown, no pool.end().

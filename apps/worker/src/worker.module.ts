@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ConfigModule } from "@nestjs/config"
 import { DiagnosticsModule } from "./diagnostics/diagnostics.module"
+import { ScreeningModule } from "./screening/screening.module"
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { DiagnosticsModule } from "./diagnostics/diagnostics.module"
       envFilePath: [".env.local", ".env"],
     }),
     DiagnosticsModule,
+    ScreeningModule,
   ],
 })
 export class WorkerModule {}
