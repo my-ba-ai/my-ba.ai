@@ -48,6 +48,22 @@ export function canTransition(from: TaskStatus, to: TaskStatus): boolean {
   return nextStatus(from) === to
 }
 
+/**
+ * Statuses a task may step back to `DRAFT` from (D75). Reject & Adjust is the
+ * one backward edge in the pipeline: criteria become editable again, and the
+ * next Run re-screens with them. Everything else only moves forward.
+ */
+export const RETURNABLE_TO_DRAFT: readonly TaskStatus[] = ["SCREENING"]
+
+export function canReturnToDraft(from: TaskStatus): boolean {
+  return RETURNABLE_TO_DRAFT.includes(from)
+}
+
+/** Every legal status change: one step forward, or back to `DRAFT` from `SCREENING`. */
+export function isLegalStatusChange(from: TaskStatus, to: TaskStatus): boolean {
+  return canTransition(from, to) || (to === "DRAFT" && canReturnToDraft(from))
+}
+
 /** True once the task has reached the point where its artifacts are immutable. */
 export function isLocked(status: TaskStatus): boolean {
   return indexOfStatus(status) >= indexOfStatus(LOCKING_STATUS)

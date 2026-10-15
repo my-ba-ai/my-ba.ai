@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
   TASK_STATUS_ORDER,
+  canReturnToDraft,
   canTransition,
+  isLegalStatusChange,
   isLocked,
   nextStatus,
   taskStatusSchema,
@@ -34,5 +36,22 @@ describe("task status", () => {
     expect(isLocked("AGENT_DISCOVERY")).toBe(false)
     expect(isLocked("CONTACT_AGENT")).toBe(true)
     expect(isLocked("CLOSED")).toBe(true)
+  })
+
+  it("allows exactly one backward edge: SCREENING back to DRAFT (D75)", () => {
+    const backward = TASK_STATUS_ORDER.filter((status) => canReturnToDraft(status))
+    expect(backward).toEqual(["SCREENING"])
+    expect(isLegalStatusChange("SCREENING", "DRAFT")).toBe(true)
+    expect(isLegalStatusChange("TREND_ANALYSIS", "DRAFT")).toBe(false)
+    expect(isLegalStatusChange("DRAFT", "DRAFT")).toBe(false)
+  })
+
+  it("treats every other change as illegal unless it is one step forward", () => {
+    for (const from of TASK_STATUS_ORDER) {
+      for (const to of TASK_STATUS_ORDER) {
+        const expected = canTransition(from, to) || (from === "SCREENING" && to === "DRAFT")
+        expect(isLegalStatusChange(from, to)).toBe(expected)
+      }
+    }
   })
 })

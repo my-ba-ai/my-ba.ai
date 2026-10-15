@@ -383,7 +383,7 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 - AC 3 / AC 7 repeat: a second task on the same suburbs made no Reference trend calls; $0.95 (query $0.73 + one uncached DOM row, see the known gap), well under ~$16.10.
 - P1-10 AC 1: renter coverage 1.0 (6 of 6; small sample).
 
-**P1-4 complete** once PR CI (`verify`, `integration`, `secrets`) is green.
+PR CI green (`verify`, `integration`, `secrets`; PR #14, merged). **P1-4 complete.**
 
 ### P1-5 — Approval UI
 
@@ -405,9 +405,63 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 
 **Description:** Graph: `DRAFT → SCREENING → (interrupt) → TREND_ANALYSIS`. Reject & Adjust returns to `DRAFT` with criteria editable. `PurchaseTasks.status` syncs with graph state. Every node execution writes an `AnalysisSteps` row.
 
-**Acceptance criteria:** unchanged from original, plus: `SCREENING_TOO_BROAD` resume path returns task to `DRAFT`.
+**Scope (D75, 2026-10-13):**
 
-**Dependencies:** P0-5, P1-4. **Risk:** medium (inherits D22).
+- **Reject & Adjust doesn't resume the graph.** It moves the task `SCREENING → DRAFT` and leaves the LangGraph thread paused at its gate, so nothing is billed. Run then sees the paused gate and resumes it with `approved: false`, and `screen` re-reads the edited criteria (D74 loop unchanged). The too-broad gate follows the same path.
+- **Gate state is mirrored to Postgres.** The worker copies the gate onto the attempt's `analysis_steps` row. The API reads only Postgres and never builds a graph.
+- **One `analysis_steps` row per attempt** (P1-4 shape kept). "Every node writes a row" means every attempt is recorded, with its gate decision on the same row. No per-node rows.
+- **UI:** Run buttons, stage state on the detail page (queued / running / awaiting approval / failed + Retry), polling. Gate rendering and the Approve / Reject buttons are P1-5. Until then, approve and reject are exercised through the API.
+
+**Schema delta (`analysis_steps`, generated migration):** `gate_kind` (`SCREENING_TOO_BROAD | SCREENING_APPROVAL`, null), `gate_status` (`awaiting | approved | rejected`, null), `gate_payload` jsonb, `gate_decision` jsonb, `gate_decided_at`, `gate_decided_by` (→ `users.id`). Checks: all gate columns null together with `gate_kind`; `gate_status` set only when `status = 'completed'`.
+
+**State machine delta (`@my-ba/shared`):** `canTransition` stays forward-only. New `canReturnToDraft(from)`, true only for `SCREENING`, is the single backward edge.
+
+**API (all tenant-scoped, unknown or other-tenant task → 404):**
+
+- `POST /api/purchase-tasks/:taskId/run` → 202. Allowed when the task is `DRAFT` and unlocked, or `SCREENING` with a `failed` latest step (Retry). Criteria must parse `criteriaSchema` (400 with issues). `DRAFT → SCREENING` is a conditional update (`where status = 'DRAFT'`). A lost race → 409. Then enqueue a `run` job (not BullMQ-deduplicated; the row lock and state checks are the guard). If the enqueue throws, the status goes back to `DRAFT`.
+- `POST /api/purchase-tasks/:taskId/approve` body `{ keep?, note? }` → 202. Requires `SCREENING` and the latest step `gate_status = awaiting` with `gate_kind = SCREENING_APPROVAL` (409 otherwise). `keep` must be a subset of the mirrored ranked area ids (400). Enqueues an `approve` job.
+- `POST /api/purchase-tasks/:taskId/reject` body `{ note? }` → 200. Requires `SCREENING` with an awaiting gate of either kind (409 otherwise). In one transaction: step `gate_status = rejected`, decision, `decided_at`, `decided_by`; task `SCREENING → DRAFT`. No job.
+- `GET /api/purchase-tasks/:taskId` gains `screening: null | { state: queued | running | awaiting_approval | failed | completed, attempt, gate: ScreeningGate | null, failureReason, costAud }`, read from the latest step plus status (`queued` = `SCREENING` with no row for the current attempt yet).
+- The P1-4 dev trigger (`POST /api/dev/screening/:taskId`, `DEV_SCREENING_TRIGGER`) is removed. The stage CLI keeps `status`. `run` and `resume` are removed, because they bypass status sync.
+
+**Worker:** `screeningJobSchema` becomes a discriminated union on `action`: `run` | `approve` (`keep?`, `note?`). `run`: if the thread is `awaiting_approval`, call `resumeStage({ approved: false })` (only reachable from `DRAFT` via Reject & Adjust); otherwise call `runStage`. `approve`: `resumeStage({ approved: true, keep, note })`. After either call, sync the result. `awaiting_approval` → mirror the gate onto the step row, task stays `SCREENING`. `completed` → step `gate_status = approved` + decision, task `SCREENING → TREND_ANALYSIS` (conditional). `failed` → the step is already `failed` (P1-4), task stays `SCREENING`. Gate nodes stay side-effect free (D74). All syncing happens in the processor, after the orchestrator returns.
+
+**Web:** "Create Task & Run Screening" saves, then calls run. Draft detail pages get "Run screening", enabled only when criteria are runnable. The detail page shows the stage state, with a typed failure message and "Retry", and refreshes every 3 s while `queued` or `running`. Edit criteria stays `DRAFT`-only.
+
+**Acceptance criteria:**
+
+1. Run on a runnable `DRAFT` task sets `SCREENING` and enqueues one job. A second Run while `SCREENING` → 409, with no second job and no extra HtAG spend.
+2. A ranked screen leaves the task `SCREENING` and the latest step with `gate_status = awaiting` and `gate_payload` that parses `screeningApprovalGateSchema`. Too-broad works the same with `screeningTooBroadGateSchema`.
+3. Approve with `keep` completes the stage. The task becomes `TREND_ANALYSIS`, and the step records `approved`, the decision, `decided_by` and `decided_at`. `keep` outside the ranked ids → 400 with no job.
+4. Reject & Adjust (from either gate kind) returns the task to `DRAFT` with criteria editable through `PATCH`, records `rejected` on the step, and makes no HtAG call.
+5. Run after Reject & Adjust resumes the same thread. The new attempt (`attempt + 1`) uses the edited criteria and gets its own step row and cost. No new thread, and earlier attempts' rows are unchanged.
+6. `SCREENING_TOO_BROAD` resume path returns task to `DRAFT` (AC 4). Approve on a too-broad gate → 409.
+7. A typed failure (`HTAG_QUOTA_EXCEEDED` etc.) leaves the task `SCREENING` and the step `failed`. Retry re-runs the same attempt from its checkpoint (P1-4 AC 5) and the task carries on.
+8. Approve, reject and run on another tenant's task → 404. On a task in the wrong state → 409, and the request is rejected before anything is enqueued.
+9. Status only moves along `canTransition` edges or `canReturnToDraft`. A unit test covers every endpoint × status pair.
+10. Integration test (real Postgres, the real job handler the worker runs, a real `LangGraphOrchestrator`, fake HtAG): run → approval → reject → edit → run → approve → `TREND_ANALYSIS`, asserting task status and step rows at each step. A fresh orchestrator (new checkpointer pool) takes the approve, as after a worker restart; SIGKILL durability itself stays P0-5's suite.
+11. Web: Run is disabled with the blocking reasons when criteria aren't runnable. The detail page shows queued / running / awaiting approval / failed + Retry, and stops polling once the state settles.
+12. Dev trigger and `DEV_SCREENING_TRIGGER` are gone (code, env examples, docs). `pnpm check` and `pnpm test:integration` pass.
+
+**Dependencies:** P0-5, P1-4. **Risk:** medium (inherits D22). Known gap: `TREND_ANALYSIS` has no stage until Phase 2, so an approved task rests there.
+
+**Built (2026-10-13, Claude).** Deltas from the spec above:
+
+- **Job logic placement:** `handleScreeningJob` (`packages/orchestrator/src/screening/job.ts`) and `StageSync` / `createPostgresStageSync` (`stage-sync.ts`) live in `@my-ba/orchestrator`. The worker's `ScreeningProcessor` only parses the payload and maps `ScreeningJobRejectedError` or a `failed` result to BullMQ's `UnrecoverableError`. This lets the AC 10 suite run the same code the worker runs.
+- **Db helpers:** `packages/db/src/screening/gates.ts` (`readLatestStep`, `sumStageCost`, `lockTask`, `changeTaskStatus`, which refuses illegal edges, `touchTask`, `touchLatestStep`, `mirrorAwaitingGate`, `decideGate`, `syncAwaitingGate`, `syncStageApproved`, `readGateStatus`). `beginAnalysisStep` clears the gate columns when it reopens an attempt. Gate kinds and statuses, and the failure reasons, are defined once in `@my-ba/shared`; `@my-ba/db` imports them.
+- **Migration `0018`:** generated (`pnpm db:generate`), adding the six gate columns, the `users` FK and six checks. The checks: kind/status/payload are set together and only on a completed attempt; the kind matches the outcome; the decision is set exactly when decided; a too-broad gate can never be approved.
+- **`queued`:** `deriveScreeningStage` (`apps/api/src/purchase-tasks/screening-stage.ts`) reads "task `updated_at` newer than the latest attempt's" as a request waiting for the worker. Every run, retry and approve stamps the task; a failed enqueue undoes the stamp.
+- **API:** `ScreeningRunService` (`screening-run.service.ts`) beside `PurchaseTasksService`. `PurchaseTaskDetail` gains `screening` (`screeningStageSchema`: state, attempt, gate, gateStatus, failureReason, costAud, totalCostAud).
+- **Web:** `RunScreeningButton`, `ScreeningStagePanel`, `StagePoller` in `components/tasks/`. The server action is `runScreening` in `app/(app)/tasks/[taskId]/actions.ts`, and the API call is shared through `lib/screening-run.ts`. "Create Task & Run Screening" saves with `intent: "run"` and then requests the run. If the run is refused, it still lands on the detail page, which offers Run again. "Edit criteria" became an outline button next to the primary Run.
+- **Removed:** `apps/api/src/dev-screening/` and `DEV_SCREENING_TRIGGER` in `.env.example`. Your local `apps/api/.env` still sets it, which is now harmless. The stage CLI is `status` only.
+- **Tests:** shared (`task-status`, `screening`), api (`screening-run.service.spec.ts` incl. the AC 9 endpoint × status table, `screening-stage.spec.ts`, controller routes), orchestrator `job.spec.ts`, worker processor adapter, web (`screening-stage-panel.test.tsx`, form Create & Run), plus `stage-flow.integration.spec.ts` (AC 10 and the too-broad-approve check constraint).
+- **Stall recovery (D76, 2026-10-15):** a stage waiting on the worker with no write for 5 min is `stalled`. The panel shows "Not responding" with Retry, and `POST /run` accepts it from `SCREENING`. The `run` job reconciles: it re-mirrors a paused gate, continues an unfinished attempt, or finishes an approval whose sync was lost (`handleScreeningJob`, completed thread). This extends AC 1: a second Run is still a 409 until the stage stalls.
+- **Polling (D76, 2026-10-15):** replaces the 3 s `router.refresh()` above. `StagePoller` polls `GET /api/purchase-tasks/:taskId/stage` from the browser (`{ state, stalled, version }`, ETag = version, 304 when unchanged) and refreshes the page only when the version moves. 2 s → 15 s backoff, paused while the tab is hidden, stopped once settled or stalled. `lib/stage-status.ts`, `lib/api-url.ts`; db `readStageProgress`.
+- **Pre-verification run (Claude, 2026-10-13):** every package's unit tests, oxlint, the Tailwind check and `oxfmt --check` pass, and typecheck passes everywhere except `@my-ba/web`. Its one error is in `next.config.ts` (`experimental.agentUpgrade`) and predates P1-6: the installed `next` is 16.3.4 while `package.json` asks for 16.4.0, so `pnpm install` should clear it. `pnpm test:integration` was not run (no Docker here).
+- **Added in review (Brian, 2026-10-15):**
+  - **Stall rule:** a stage that is `queued` or `running` with no change to the task or attempt row for 5 min (`SCREENING_STALL_AFTER_MS`) reads as `stalled`, and Run accepts it as a Retry. This closes the gap where a failed approve job (or a dead worker, or a lost job) left the task `queued` forever.
+  - **Polling:** `GET /purchase-tasks/:taskId/stage` (`screeningStageStatusSchema`) returns a `version` built from both rows' `updated_at` plus the stall flag, served as an ETag, so an unchanged poll is a `304`. `StagePoller` polls it from the browser with the Clerk session token (`lib/stage-status.ts`, `lib/api-url.ts`). It starts at 2 s, backs off to 15 s, pauses while the tab is hidden, and calls `router.refresh()` only when the version moves. It replaces the 3 s refresh.
+- **Verified (2026-10-15, Brian).** Code reviewed; end-to-end browser run (Create & Run → ready for review); an old P1-4 task re-run showed its paused gate without a new HtAG charge; restart while paused. `pnpm check`, `pnpm build`, `pnpm test:integration` (after the too-broad check was fixed to read the Postgres error from Drizzle's `cause`) and PR CI (`verify`, `integration`, `secrets`) all pass. AC 3, 4 and 6 (approve / Reject & Adjust) are covered by the unit and integration suites; their browser check moves to P1-5, which adds the buttons. **P1-6 complete.**
 
 ### P1-7 — Screening results view + suburb drawer
 
@@ -578,7 +632,49 @@ Profile block: `{ strategy, risk, presetVersion, weights, weightsCustomised, fil
 
 ## Post-MVP backlog
 
-Chat (WebSocket, thread-per-task-per-agent, email notification fallback) · PDF export · payment/billing · automated state license verification · off-market listings with visibility controls · proactive suburb alerts · evaluation harness for agent output quality · preset back-test calibration (D17) · reusable investor profiles (D18, after Q10) · sponsored placement slot (D12/D13, after Q12) · mortgage broker persona (D15) · HtAG enterprise terms / cap increases (Q18)
+Chat (WebSocket, thread-per-task-per-agent, email notification fallback) · PDF export · payment/billing · automated state license verification · off-market listings with visibility controls · proactive suburb alerts · evaluation harness for agent output quality · preset back-test calibration (D17) · reusable investor profiles (D18, after Q10) · sponsored placement slot (D12/D13, after Q12) · mortgage broker persona (D15) · HtAG enterprise terms / cap increases (Q18) · push stage updates over SSE (PM-2)
+
+### PM-1 — Accessibility (a11y) scanning in CI
+
+**Description:** Nothing in CI checks rendered accessibility. `.oxlintrc.json` enables the `jsx-a11y` plugin, so `pnpm lint` catches static JSX mistakes (a missing label association, a role that should be a tag) — but it reads source, not output. It cannot see focus order, accessible names computed at runtime, contrast against the resolved theme, or anything rendered into a portal. The only runtime coverage today is D52's manual 8-step keyboard checklist on `/dev/ui`, which a human has to remember to re-run after each `@base-ui/react` upgrade. Two lanes, both gated in CI:
+
+- **Component lane** — `axe-core` via `vitest-axe` inside the existing Vitest + Testing Library suites (`apps/web/src/**/*.test.tsx`, jsdom). Register the matcher in `src/test/setup.ts` so a test is one assertion call. Gives per-component regression signal and runs inside `pnpm test`, so the existing `verify` job covers it with no new job.
+- **Rendered-app lane** — `@axe-core/playwright` against a production build (`next build` + `next start`) for the real routes: `/`, `/tasks`, `/tasks/new`, `/tasks/[taskId]`, `/tasks/[taskId]/edit`, `/sign-in`, plus `/dev/ui` for the primitives gallery. This is the lane that sees portal focus, the suburb drawer's focus trap and token contrast — the blind spots jsdom and the linter share. New `a11y` job, modelled on `integration`.
+
+Scope notes: light mode only (D55), so contrast is single-theme. `/dev/ui` 404s in production but is reachable in a CI build, which is what makes it useful here. The two `oxlint-disable` a11y suppressions (`suburb-rows.tsx`, `ui/label.tsx`) are deliberate and documented — the axe pass should confirm they are still correct, not become a reason to widen them.
+
+**Acceptance criteria:**
+
+1. `vitest-axe` matcher registered in `apps/web/src/test/setup.ts`, with a shared helper that asserts zero violations and prints the rule id, impact and offending element for each.
+2. Interactive components carry an axe assertion: `TaskCriteriaForm`, the results view / suburb drawer, `SidebarNav`, `PageBreadcrumb`, and the `/dev/ui` primitives. Runs under `pnpm test`, so `verify` gates it.
+3. New `a11y` CI job runs `@axe-core/playwright` over the built app for the routes above and fails on any `serious` or `critical` violation.
+4. `moderate` / `minor` violations are reported in the job summary without failing the job, so the gate can land without a cleanup sprint first. Tightening the threshold is a follow-up, recorded as such.
+5. Deliberately regressing one rule (e.g. removing a form control's label) fails each lane. Verify on a throwaway branch, then revert — same protocol as P0-7 AC 5.
+6. A genuine false positive is suppressed per-rule, per-element, with a comment saying why. Never by disabling a rule globally or dropping a route from the sweep.
+7. D52's manual keyboard checklist is reduced to what axe cannot assert (focus return on close, Esc layering, slider no-cross), and `docs/04-decisions-log.md` records which steps are now automated.
+8. `a11y` is a required status check on `main` alongside `verify` and `integration`. Job timeout ≤ 15 min.
+
+**Dependencies:** P1-5 (approval UI) and P1-7 (results view + suburb drawer) for the screens worth sweeping; the component lane can land before either. **Risk:** low — additive, no production code change. Watch items: the second lane needs a real browser, so the job runs `playwright install --with-deps chromium` or a Playwright image — budget that the way P0-7 budgets its image pull. Clerk's hosted `/sign-in` markup is third-party; if it reports violations we cannot fix, scope that route out with a note rather than relaxing rules globally.
+
+### PM-2 — Push stage updates (SSE)
+
+**Description:** The task detail page learns about stage changes by polling `GET /api/purchase-tasks/:taskId/stage` (D76): cheap (two narrow rows, 304 when unchanged), but still one request per open tab every 2–15 s while a stage runs. That's fine for screening, which finishes in seconds. It stops being fine for stages that wait minutes or hours (Phase 2 analysis, Phase 5 outreach waiting on agent replies), or with many open tabs. Replace the poll with a server push:
+
+- **Source:** BullMQ `QueueEvents` (Redis streams, already running) for job `completed` / `failed` on each stage queue. No new publish code in the worker. API-side writes (run, reject) are already known to the client that made them.
+- **Transport:** Server-Sent Events, `GET /api/purchase-tasks/:taskId/events`, one-way, served by the API. The browser calls `router.refresh()` on an event, as the poller does now.
+- **Tenancy:** filter events by the tenant resolved from the token (D45), and check the task is visible under RLS before streaming. Never use a channel or task named by the client as authority.
+- **Auth:** `EventSource` can't send an `Authorization` header. Use a short-lived, single-task signed ticket from an authenticated `POST`, or stream through a Next route handler that adds the bearer. Decide in the ticket.
+- **Fallback:** keep the D76 poll for when the stream drops or the host can't hold long connections.
+
+**Acceptance criteria:**
+
+1. A stage change reaches an open detail page within 1 s, with no polling while the stream is connected.
+2. Another tenant's task id gets 404 and no events. A test proves an event for tenant A is never written to tenant B's stream.
+3. A dropped stream reconnects with backoff, and falls back to the D76 poll after N failures. The page never shows a stale settled state.
+4. The hosting target (Railway/Render) holds the connection through its proxy (idle timeout, heartbeat comment every ≤ 25 s), checked on a deployed environment.
+5. Load check: 50 idle open tabs cost no DB queries between events.
+
+**Dependencies:** a stage that waits minutes or more (Phase 2 or Phase 5); D76. **Risk:** low–medium. Long-lived connections and auth on `EventSource` are the work. Don't use Postgres `LISTEN/NOTIFY` for this: notifications bypass RLS.
 
 ---
 

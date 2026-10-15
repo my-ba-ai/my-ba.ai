@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 import type { AuthenticatedRequest } from "../auth/authenticated-request"
 import { PurchaseTasksController } from "./purchase-tasks.controller"
 import { PurchaseTasksService } from "./purchase-tasks.service"
+import { ScreeningRunService } from "./screening-run.service"
 
 const AUTH: AuthContext = {
   externalAuthId: "user_2abc",
@@ -34,6 +35,12 @@ describe("PurchaseTasksController (HTTP)", () => {
     create: vi.fn(async () => ({ id: "created" })),
     update: vi.fn(async () => ({ id: "updated" })),
     screeningEstimate: vi.fn(() => ({ ceilingAud: 1, budgetAud: 20, lines: [] })),
+    stageStatus: vi.fn(async () => ({ state: "running", stalled: false, version: "10-20-0" })),
+  }
+  const screening = {
+    run: vi.fn(async () => ({ id: "ran" })),
+    approve: vi.fn(async () => ({ id: "approved" })),
+    reject: vi.fn(async () => ({ id: "rejected" })),
   }
   const ID = "aaaaaaaa-2222-4333-8444-555555555555"
   const send = (method: string, path: string, body: unknown) =>
@@ -46,7 +53,10 @@ describe("PurchaseTasksController (HTTP)", () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [PurchaseTasksController],
-      providers: [{ provide: PurchaseTasksService, useValue: service }],
+      providers: [
+        { provide: PurchaseTasksService, useValue: service },
+        { provide: ScreeningRunService, useValue: screening },
+      ],
     }).compile()
 
     // forceCloseConnections: fetch (undici) keeps sockets alive, and without it
@@ -96,6 +106,33 @@ describe("PurchaseTasksController (HTTP)", () => {
     expect(service.get).not.toHaveBeenCalled()
   })
 
+  it("GET /purchase-tasks/:taskId/stage answers the status with its version as the ETag (P1-6)", async () => {
+    expect((await fetch(`${base}/purchase-tasks/not-a-uuid/stage`)).status).toBe(400)
+    const response = await fetch(`${base}/purchase-tasks/${ID}/stage`)
+    expect(response.status).toBe(200)
+    expect(response.headers.get("etag")).toBe('"10-20-0"')
+    expect(response.headers.get("cache-control")).toBe("private, no-cache")
+    expect(await response.json()).toEqual({ state: "running", stalled: false, version: "10-20-0" })
+    expect(service.stageStatus).toHaveBeenCalledWith(AUTH, ID)
+  })
+
+  it("GET /purchase-tasks/:taskId/stage answers 304 with no body when the version is unchanged", async () => {
+    const same = await fetch(`${base}/purchase-tasks/${ID}/stage`, {
+      headers: { "if-none-match": '"10-20-0"' },
+    })
+    expect(same.status).toBe(304)
+    expect(await same.text()).toBe("")
+    // What a browser sends: a list, weak forms, and the `no-cache` a conditional fetch adds.
+    const listed = await fetch(`${base}/purchase-tasks/${ID}/stage`, {
+      headers: { "if-none-match": 'W/"10-19-0", "10-20-0"', "cache-control": "no-cache" },
+    })
+    expect(listed.status).toBe(304)
+    const moved = await fetch(`${base}/purchase-tasks/${ID}/stage`, {
+      headers: { "if-none-match": '"10-19-0"' },
+    })
+    expect(moved.status).toBe(200)
+  })
+
   it("POST /purchase-tasks saves a partial draft (P1-3 AC 6)", async () => {
     const body = { intent: "draft", name: "QLD cashflow", criteria: { states: ["QLD"] } }
     const response = await send("POST", "/purchase-tasks", body)
@@ -124,5 +161,30 @@ describe("PurchaseTasksController (HTTP)", () => {
     const response = await send("PATCH", `/purchase-tasks/${ID}`, body)
     expect(response.status).toBe(200)
     expect(service.update).toHaveBeenCalledWith(AUTH, ID, body)
+  })
+
+  it("POST /purchase-tasks/:taskId/run answers 202 and forwards (P1-6)", async () => {
+    expect((await send("POST", "/purchase-tasks/not-a-uuid/run", {})).status).toBe(400)
+    const response = await send("POST", `/purchase-tasks/${ID}/run`, {})
+    expect(response.status).toBe(202)
+    expect(screening.run).toHaveBeenCalledWith(AUTH, ID)
+  })
+
+  it("POST /purchase-tasks/:taskId/approve validates the body, then forwards with 202", async () => {
+    screening.approve.mockClear()
+    expect((await send("POST", `/purchase-tasks/${ID}/approve`, { approved: true })).status).toBe(
+      400,
+    )
+    expect(screening.approve).not.toHaveBeenCalled()
+    const response = await send("POST", `/purchase-tasks/${ID}/approve`, { keep: ["loc-a"] })
+    expect(response.status).toBe(202)
+    expect(screening.approve).toHaveBeenCalledWith(AUTH, ID, { keep: ["loc-a"] })
+  })
+
+  it("POST /purchase-tasks/:taskId/reject answers 200 and forwards", async () => {
+    expect((await send("POST", `/purchase-tasks/${ID}/reject`, { keep: [] })).status).toBe(400)
+    const response = await send("POST", `/purchase-tasks/${ID}/reject`, { note: "tighten" })
+    expect(response.status).toBe(200)
+    expect(screening.reject).toHaveBeenCalledWith(AUTH, ID, { note: "tighten" })
   })
 })

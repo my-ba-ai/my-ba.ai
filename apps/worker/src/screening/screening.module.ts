@@ -2,13 +2,17 @@ import { Inject, Module, type OnApplicationShutdown } from "@nestjs/common"
 import type { DatabasePool } from "@my-ba/db"
 import type { Orchestrator } from "@my-ba/orchestrator"
 import { QueueModule } from "../queue/queue.module"
-import { orchestratorProvider, screeningPoolProvider } from "./orchestrator.provider"
+import {
+  orchestratorProvider,
+  screeningPoolProvider,
+  stageSyncProvider,
+} from "./orchestrator.provider"
 import { ScreeningProcessor } from "./screening.processor"
 import { ORCHESTRATOR, SCREENING_POOL } from "./screening.tokens"
 
 @Module({
   imports: [QueueModule],
-  providers: [screeningPoolProvider, orchestratorProvider, ScreeningProcessor],
+  providers: [screeningPoolProvider, orchestratorProvider, stageSyncProvider, ScreeningProcessor],
 })
 export class ScreeningModule implements OnApplicationShutdown {
   constructor(

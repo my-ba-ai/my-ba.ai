@@ -1,34 +1,41 @@
 import { Inject, Logger } from "@nestjs/common"
 import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq"
 import { type Job, UnrecoverableError } from "bullmq"
-import type { Orchestrator, StageResult } from "@my-ba/orchestrator"
-import { QUEUE_NAMES, screeningJobSchema } from "@my-ba/shared"
-import { ORCHESTRATOR } from "./screening.tokens"
+import {
+  handleScreeningJob,
+  type Orchestrator,
+  ScreeningJobRejectedError,
+  type StageResult,
+  type StageSync,
+} from "@my-ba/orchestrator"
+import { QUEUE_NAMES, type ScreeningJob, screeningJobSchema } from "@my-ba/shared"
+import { ORCHESTRATOR, STAGE_SYNC } from "./screening.tokens"
 
 /** What the job returns; visible in Bull Board. */
 export interface ScreeningJobResult {
+  action: ScreeningJob["action"]
   status: StageResult["status"]
   gate?: string
-  reason?: string
 }
 
 /**
- * Runs the screening stage for a task (P1-4, D73). The orchestrator does the
- * work and owns idempotency: a task already paused at a gate returns that gate
- * without another HtAG call, and a failed one retries from its checkpoint.
+ * BullMQ adapter for the screening stage (P1-4, P1-6). What a job does —
+ * which orchestrator call, and the status / gate sync after it — is
+ * `handleScreeningJob` in `@my-ba/orchestrator`, so the integration suite
+ * there runs the same code against Postgres.
  *
- * Concurrency 1: every screen spends money, and two screens of the same task
- * in parallel would each pay. The producer also deduplicates by task.
- *
- * A failed stage is not retried by BullMQ (`UnrecoverableError`): retrying a
- * quota or balance failure immediately cannot succeed, and each attempt may
- * bill. Re-enqueue once the cause is fixed (AC 5).
+ * Concurrency 1: every screen spends money. Nothing here is retried by
+ * BullMQ (`UnrecoverableError`): a failed stage is retried by the user once
+ * the cause is fixed (P1-4 AC 5), and a rejected job can't succeed on retry.
  */
 @Processor(QUEUE_NAMES.SCREENING, { concurrency: 1 })
 export class ScreeningProcessor extends WorkerHost {
   private readonly logger = new Logger(ScreeningProcessor.name)
 
-  constructor(@Inject(ORCHESTRATOR) private readonly orchestrator: Orchestrator) {
+  constructor(
+    @Inject(ORCHESTRATOR) private readonly orchestrator: Orchestrator,
+    @Inject(STAGE_SYNC) private readonly sync: StageSync,
+  ) {
     super()
   }
 
@@ -41,18 +48,34 @@ export class ScreeningProcessor extends WorkerHost {
           .join("; ")}`,
       )
     }
-    const { tenantId, taskId } = parsed.data
-    this.logger.log(`Job ${job.name}#${job.id ?? "?"} tenant=${tenantId} task=${taskId}`)
+    const payload = parsed.data
+    this.logger.log(
+      `Job ${job.name}#${job.id ?? "?"} ${payload.action} tenant=${payload.tenantId} task=${payload.taskId}`,
+    )
 
-    const result = await this.orchestrator.runStage({ tenantId, taskId, stage: "screening" })
+    let result: StageResult
+    try {
+      result = await handleScreeningJob(
+        {
+          orchestrator: this.orchestrator,
+          sync: this.sync,
+          logger: { warn: (message) => this.logger.warn(message) },
+        },
+        payload,
+      )
+    } catch (error) {
+      if (error instanceof ScreeningJobRejectedError) throw new UnrecoverableError(error.message)
+      throw error
+    }
 
     if (result.status === "failed") {
       throw new UnrecoverableError(
         `screening failed${result.reason ? ` (${result.reason})` : ""}: ${result.error}`,
       )
     }
-    this.logger.log(`Task ${taskId}: ${result.status}`)
+    this.logger.log(`Task ${payload.taskId}: ${result.status}`)
     return {
+      action: payload.action,
       status: result.status,
       ...(result.status === "awaiting_approval" ? { gate: result.gate.kind } : {}),
     }

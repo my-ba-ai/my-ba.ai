@@ -1,14 +1,27 @@
 "use server"
 
 import {
+  type DraftCriteria,
   purchaseTaskDetailSchema,
   purchaseTaskIdParamSchema,
+  type SaveIntent,
   savePurchaseTaskRequestSchema,
-  type SavePurchaseTaskRequestInput,
 } from "@my-ba/shared"
 import { redirect, unstable_rethrow } from "next/navigation"
 import { ApiError, apiFetch } from "@/lib/api-client"
 import { API_FAILURE_SUMMARY, classifyApiError } from "@/lib/api-failure"
+import { describeRunFailure, requestScreeningRun } from "@/lib/screening-run"
+
+/**
+ * What the form sends. Looser than `SavePurchaseTaskRequest` on purpose: the
+ * form holds draft criteria either way, and `run` completeness is decided by
+ * the schema parse below, not by the caller's types.
+ */
+export interface SaveTaskInput {
+  intent: SaveIntent
+  name: string
+  criteria: DraftCriteria
+}
 
 export interface SaveTaskFailure {
   ok: false
@@ -45,7 +58,9 @@ function issuesFrom(body: string): SaveTaskFailure["issues"] {
 
 /**
  * Create (`taskId === null`) or update a draft purchase task (P1-3), then go
- * to its detail page. Runs on the server so the Clerk token never reaches the
+ * to its detail page. With `intent: "run"` the criteria must be complete, and
+ * once saved the screening run is requested too (P1-6, "Create Task & Run
+ * Screening"). Runs on the server so the Clerk token never reaches the
  * browser (same path as every read, `apiFetch`). The payload is parsed here
  * as well as in the API: a Server Action is a public endpoint.
  *
@@ -53,7 +68,7 @@ function issuesFrom(body: string): SaveTaskFailure["issues"] {
  */
 export async function saveTask(
   taskId: string | null,
-  input: SavePurchaseTaskRequestInput,
+  input: SaveTaskInput,
 ): Promise<SaveTaskFailure> {
   if (taskId !== null && !purchaseTaskIdParamSchema.safeParse(taskId).success) {
     return failure("That task id is not valid.")
@@ -92,6 +107,20 @@ export async function saveTask(
     const classified = classifyApiError(error)
     console.error(`[tasks] save failed at stage "${classified.stage}":`, error)
     return failure(API_FAILURE_SUMMARY[classified.stage])
+  }
+
+  if (parsed.data.intent === "run") {
+    // The task is saved either way. If the run request fails, the detail page
+    // still offers Run screening, so land there rather than back on a form
+    // that would create the task a second time.
+    try {
+      await requestScreeningRun(savedId)
+    } catch (error: unknown) {
+      unstable_rethrow(error)
+      console.error(
+        `[tasks] saved ${savedId} but the run was refused: ${describeRunFailure(error)}`,
+      )
+    }
   }
 
   redirect(`/tasks/${savedId}`)
