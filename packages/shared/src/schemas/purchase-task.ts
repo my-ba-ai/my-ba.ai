@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { taskStatusSchema } from "../domain/task-status"
 import { draftCriteriaSchema } from "./criteria"
+import { screeningStageSchema } from "./screening"
 
 /**
  * `:taskId` route parameter. Validated before it reaches a query so a malformed
@@ -32,12 +33,14 @@ export type PurchaseTaskSummary = z.infer<typeof purchaseTaskSummarySchema>
 
 /**
  * `GET /api/purchase-tasks/:taskId`, and the response to create / update
- * (P1-3). `criteria` is whatever was saved: a draft may be partial, so it
+ * (P1-3), and to run / approve / reject (P1-6). `criteria` is whatever was saved: a draft may be partial, so it
  * parses as `draftCriteriaSchema` (full criteria are a subset of it). Whether
  * it is runnable is `criteriaSchema.safeParse(criteria).success`.
  */
 export const purchaseTaskDetailSchema = purchaseTaskSummarySchema.extend({
   criteria: draftCriteriaSchema,
+  /** Null until the task has been run for the first time (P1-6). */
+  screening: screeningStageSchema.nullable(),
 })
 
 export type PurchaseTaskDetail = z.infer<typeof purchaseTaskDetailSchema>

@@ -1,16 +1,16 @@
 import { type CriteriaFormValues, applyPreset, emptyFormValues } from "@/lib/criteria-form"
-import type { SavePurchaseTaskRequestInput } from "@my-ba/shared"
+import type { SaveTaskInput } from "@/app/(app)/tasks/(overview)/actions"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { TaskCriteriaForm } from "./task-criteria-form"
 
-const saveTask = vi.fn(async (_taskId: string | null, _input: SavePurchaseTaskRequestInput) => ({
+const saveTask = vi.fn(async (_taskId: string | null, _input: SaveTaskInput) => ({
   ok: false as const,
   message: "stubbed",
   issues: [],
 }))
 vi.mock("@/app/(app)/tasks/(overview)/actions", () => ({
-  saveTask: (taskId: string | null, input: SavePurchaseTaskRequestInput) => saveTask(taskId, input),
+  saveTask: (taskId: string | null, input: SaveTaskInput) => saveTask(taskId, input),
 }))
 
 afterEach(() => {
@@ -98,5 +98,43 @@ describe("TaskCriteriaForm — steps as tabs", () => {
       ),
     )
     expect(screen.getByRole("tabpanel", { name: "Review" })).toBeDefined()
+  })
+})
+
+const openReview = async () => {
+  fireEvent.click(screen.getByRole("tab", { name: "Review" }))
+  await waitFor(() =>
+    expect(screen.getByRole("tab", { name: "Review" }).getAttribute("aria-selected")).toBe("true"),
+  )
+}
+
+describe("TaskCriteriaForm — Create Task & Run Screening (P1-6)", () => {
+  it("saves with intent run when the criteria can run", async () => {
+    renderForm({ ...prefilled(), propertyType: "house" })
+    await openReview()
+    const button = screen.getByRole("button", { name: "Create Task & Run Screening" })
+    expect(button.hasAttribute("disabled")).toBe(false)
+    fireEvent.click(button)
+    await waitFor(() => expect(saveTask).toHaveBeenCalledTimes(1))
+    expect(saveTask).toHaveBeenCalledWith(null, expect.objectContaining({ intent: "run" }))
+  })
+
+  it("stays disabled while the criteria can't run (AC 11)", async () => {
+    const values = {
+      ...prefilled(),
+      propertyType: "house" as const,
+      weights: { ...prefilled().weights },
+    }
+    for (const key of Object.keys(values.weights) as Array<keyof typeof values.weights>) {
+      values.weights[key] = 0
+    }
+    renderForm(values)
+    await openReview()
+    const button = screen.getByRole("button", { name: "Create Task & Run Screening" })
+    expect(button.getAttribute("aria-disabled") === "true" || button.hasAttribute("disabled")).toBe(
+      true,
+    )
+    fireEvent.click(button)
+    expect(saveTask).not.toHaveBeenCalled()
   })
 })

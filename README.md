@@ -233,18 +233,33 @@ Phase 1 — HtAG Integration + Suburb Screener:
   measured on P1-4's first real screen. `pnpm check` and
   `pnpm test:integration` pass (2026-10-08).
 
-- **P1-4 complete (pending PR CI):** the Suburb Screener. A `screening`
+- **P1-4 complete:** the Suburb Screener. A `screening`
   stage in `@my-ba/orchestrator` (screen → too-broad / approval gates, looping
   in one thread on adjust, D74) runs the compiled query, upserts suburbs with
   SAL link and postcode, hydrates price / rent / yield history cache-first,
   joins ABS renter share, ranks with P1-8 and adds supply detail for the top N.
   New `analysis_steps` and `screening_results` tables (cost summed from
-  `htag_calls`), a `screening` BullMQ processor, a dev-only
-  `POST /api/dev/screening/:taskId` (`DEV_SCREENING_TRIGGER=1`) and a dev stage
-  CLI for resume until P1-6. Migrations `0016`–`0017`. Verified on real HtAG
+  `htag_calls`), a `screening` BullMQ processor, and a dev-only trigger and
+  stage CLI (both replaced by P1-6). Migrations `0016`–`0017`. Verified on real HtAG
   data (2026-10-12): empty, too-broad, ranked and repeat (cache-hit) screens,
   plus a resumed loop; the first ranked screen found and fixed a comma-joined
   `area_id` bug in the client (Q13e). Closes P1-10 AC 1 (renter coverage 1.0).
-  `pnpm check` and `pnpm test:integration` pass.
+  `pnpm check`, `pnpm test:integration` and PR CI pass (2026-10-13).
 
-Next up: **P1-5** (approval UI) and **P1-6** (run, status sync, resume endpoint).
+- **P1-6 complete:** task state machine wiring (D75).
+  `POST /api/purchase-tasks/:taskId/run | approve | reject` move the task
+  `DRAFT → SCREENING → TREND_ANALYSIS`, with Reject & Adjust as the one
+  backward edge (`SCREENING → DRAFT`). Reject only records the decision: the
+  graph stays paused until the next Run resumes it with the edited criteria,
+  so nothing is billed in between. The worker mirrors each gate onto its
+  `analysis_steps` row (`gate_*` columns, migration `0018`), so the API never
+  reads the checkpoint; the job logic is `handleScreeningJob` in
+  `@my-ba/orchestrator`. Web: "Create Task & Run Screening" and "Run
+  screening" are live; the detail page shows queued / running / awaiting
+  approval / failed, polls `GET /:taskId/stage` (ETag, backoff), and offers
+  Retry after a failure or a 5-minute stall. The dev trigger is gone and the
+  stage CLI is `status` only. Verified end to end; `pnpm check`, `pnpm build`,
+  `pnpm test:integration` and PR CI pass (2026-10-15).
+
+Next up: **P1-5** (approval UI: renders both gates and calls the approve /
+reject endpoints, closing P1-6's deferred browser check of AC 3, 4 and 6).

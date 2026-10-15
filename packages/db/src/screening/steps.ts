@@ -70,6 +70,13 @@ export async function beginAnalysisStep(
           outcome: null,
           failureReason: null,
           failureDetail: null,
+          // A re-run attempt is not paused anywhere yet (D75).
+          gateKind: null,
+          gateStatus: null,
+          gatePayload: null,
+          gateDecision: null,
+          gateDecidedAt: null,
+          gateDecidedBy: null,
           finishedAt: null,
           updatedAt: sql`now()`,
           ...meta,

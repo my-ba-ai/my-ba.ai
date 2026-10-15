@@ -1,4 +1,12 @@
-import { purchaseTasks } from "@my-ba/db"
+import {
+  dbNow,
+  type LatestStep,
+  purchaseTasks,
+  readLatestStep,
+  readStageProgress,
+  sumStageCost,
+  type TenantTransaction,
+} from "@my-ba/db"
 import { estimateScreeningCostCeiling } from "@my-ba/htag-client"
 import {
   type AuthContext,
@@ -6,13 +14,17 @@ import {
   type PurchaseTaskDetail,
   type SavePurchaseTaskRequest,
   type ScreeningCostEstimate,
+  type ScreeningStageStatus,
   listPurchaseTasksResponseSchema,
   purchaseTaskDetailSchema,
   screeningCostEstimateSchema,
+  screeningStageStatusSchema,
+  taskStatusSchema,
 } from "@my-ba/shared"
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common"
 import { desc, eq, sql } from "drizzle-orm"
 import { TenantDatabaseService } from "../database/tenant-database.service"
+import { deriveScreeningProgress, deriveScreeningStage, stageVersion } from "./screening-stage"
 
 const summaryColumns = {
   id: purchaseTasks.id,
@@ -44,12 +56,41 @@ function serialiseSummary(row: SummaryRow) {
   }
 }
 
-const detailColumns = { ...summaryColumns, criteria: purchaseTasks.criteria }
+const detailColumns = { ...summaryColumns, criteria: purchaseTasks.criteria, dbNow: dbNow() }
 
-type DetailRow = SummaryRow & { criteria: unknown }
+/** `dbNow` is Postgres `now()`, read with the row; it tells a stalled stage (P1-6). */
+type DetailRow = SummaryRow & { criteria: unknown; dbNow: Date }
 
-function serialiseDetail({ criteria, ...summary }: DetailRow): PurchaseTaskDetail {
-  return purchaseTaskDetailSchema.parse({ ...serialiseSummary(summary), criteria })
+/** What the detail shape needs beyond the task row: its latest screening attempt (P1-6). */
+export interface StageSnapshot {
+  step: LatestStep | null
+  totalCostAud: string
+}
+
+const NO_STAGE: StageSnapshot = { step: null, totalCostAud: "0.0000" }
+
+/** Reads the latest screening attempt and total spend, in the caller's transaction. */
+export async function readStageSnapshot(
+  tx: TenantTransaction,
+  taskId: string,
+): Promise<StageSnapshot> {
+  const step = await readLatestStep(tx, taskId, "screening")
+  if (!step) return NO_STAGE
+  return { step, totalCostAud: await sumStageCost(tx, taskId, "screening") }
+}
+
+function serialiseDetail(
+  { criteria, dbNow: now, ...summary }: DetailRow,
+  stage: StageSnapshot = NO_STAGE,
+): PurchaseTaskDetail {
+  const screening = deriveScreeningStage({
+    taskStatus: taskStatusSchema.parse(summary.status),
+    taskUpdatedAt: summary.updatedAt,
+    step: stage.step,
+    now,
+    totalCostAud: stage.totalCostAud,
+  })
+  return purchaseTaskDetailSchema.parse({ ...serialiseSummary(summary), criteria, screening })
 }
 
 /**
@@ -78,26 +119,49 @@ export class PurchaseTasksService {
    * by design — a 403 would confirm the id exists.
    */
   async get(auth: AuthContext, taskId: string): Promise<PurchaseTaskDetail> {
-    const row = await this.tenantDb.run(auth, async (tx) => {
+    const found = await this.tenantDb.run(auth, async (tx) => {
       const rows = await tx
-        .select({ ...summaryColumns, criteria: purchaseTasks.criteria })
+        .select(detailColumns)
         .from(purchaseTasks)
         .where(eq(purchaseTasks.id, taskId))
         .limit(1)
-      return rows[0] ?? null
+      const row = rows[0]
+      if (!row) return null
+      return { row, stage: await readStageSnapshot(tx, taskId) }
     })
 
-    if (!row) {
+    if (!found) {
       throw new NotFoundException(`Purchase task ${taskId} not found`)
     }
 
-    return serialiseDetail(row)
+    return serialiseDetail(found.row, found.stage)
+  }
+
+  /**
+   * Where the screening stage is, and its `version` (P1-6): what the detail
+   * page polls instead of re-rendering. One unlocked read of two narrow rows;
+   * 404 exactly as `get`.
+   */
+  async stageStatus(auth: AuthContext, taskId: string): Promise<ScreeningStageStatus> {
+    const read = await this.tenantDb.run(auth, (tx) => readStageProgress(tx, taskId, "screening"))
+    if (!read) throw new NotFoundException(`Purchase task ${taskId} not found`)
+    const input = {
+      taskStatus: taskStatusSchema.parse(read.task.status),
+      taskUpdatedAt: read.task.updatedAt,
+      step: read.step,
+      now: read.task.dbNow,
+    }
+    const progress = deriveScreeningProgress(input)
+    return screeningStageStatusSchema.parse(
+      progress ?? { state: null, stalled: false, version: stageVersion(input, false) },
+    )
   }
 
   /**
    * Create a task in `DRAFT` (P1-3). The body was parsed by the controller —
    * `run` intent has already proven the criteria complete. Either way the task
-   * stays `DRAFT`: the transition to `SCREENING` is P1-6's.
+   * is saved as `DRAFT`; the web then calls `POST /:taskId/run` (P1-6), which
+   * owns the transition to `SCREENING`.
    *
    * `tenant_id` and `user_id` come from the token (D45); RLS's WITH CHECK
    * rejects a row for any other tenant.
@@ -150,7 +214,12 @@ export class PurchaseTasksService {
         .set({ name: body.name, criteria: body.criteria, updatedAt: sql`now()` })
         .where(eq(purchaseTasks.id, taskId))
         .returning(detailColumns)
-      return { kind: "updated", row: rows[0] ?? null } as const
+      // A draft sent back by Reject & Adjust still shows its last attempt.
+      return {
+        kind: "updated",
+        row: rows[0] ?? null,
+        stage: await readStageSnapshot(tx, taskId),
+      } as const
     })
 
     if (result.kind === "missing") {
@@ -165,7 +234,7 @@ export class PurchaseTasksService {
     if (!result.row) {
       throw new NotFoundException(`Purchase task ${taskId} not found`)
     }
-    return serialiseDetail(result.row)
+    return serialiseDetail(result.row, result.stage)
   }
 
   /**

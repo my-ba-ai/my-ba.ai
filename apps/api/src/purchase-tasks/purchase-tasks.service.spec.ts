@@ -15,6 +15,8 @@ const AUTH: AuthContext = {
   provisioned: false,
 }
 
+const NO_STAGE = { step: null, totalCostAud: "0.0000" }
+
 const ROW = {
   id: "aaaaaaaa-2222-4333-8444-555555555555",
   name: "Brisbane growth corridor",
@@ -24,6 +26,9 @@ const ROW = {
   createdAt: new Date("2026-09-21T01:00:00.000Z"),
   updatedAt: new Date("2026-09-21T02:00:00.000Z"),
 }
+
+/** A detail read also carries Postgres `now()`; a minute after the attempt below. */
+const DETAIL = { ...ROW, dbNow: new Date("2026-09-21T03:01:00.000Z") }
 
 /**
  * `run` resolves to whatever the query would have returned. The query itself
@@ -66,9 +71,72 @@ describe("PurchaseTasksService", () => {
 
   it("returns detail with criteria", async () => {
     const criteria = { states: ["QLD"], filters: { maxVacancyRatePct: 1.5 } }
-    const { db } = fakeTenantDb({ ...ROW, criteria })
+    const { db } = fakeTenantDb({ row: { ...DETAIL, criteria }, stage: NO_STAGE })
     const detail = await new PurchaseTasksService(db).get(AUTH, ROW.id)
     expect(detail).toMatchObject({ id: ROW.id, criteria })
+  })
+
+  it("derives the screening block from the latest attempt (P1-6)", async () => {
+    const step = {
+      id: "bbbbbbbb-2222-4333-8444-555555555555",
+      attempt: 2,
+      status: "running",
+      failureReason: null,
+      costAud: "0.5000",
+      gateKind: null,
+      gateStatus: null,
+      gatePayload: null,
+      updatedAt: new Date("2026-09-21T03:00:00.000Z"),
+    }
+    const { db } = fakeTenantDb({
+      row: { ...DETAIL, criteria: {} },
+      stage: { step, totalCostAud: "1.7500" },
+    })
+    const detail = await new PurchaseTasksService(db).get(AUTH, ROW.id)
+    expect(detail.screening).toEqual({
+      state: "running",
+      stalled: false,
+      version: `${ROW.updatedAt.getTime()}-${step.updatedAt.getTime()}-0`,
+      attempt: 2,
+      gate: null,
+      gateStatus: null,
+      failureReason: null,
+      costAud: "0.5000",
+      totalCostAud: "1.7500",
+    })
+  })
+
+  it("reports the stage's state and version from the narrow progress read (P1-6)", async () => {
+    const stepUpdatedAt = new Date("2026-09-21T03:00:00.000Z")
+    const { db, run } = fakeTenantDb({
+      task: { status: "SCREENING", updatedAt: ROW.updatedAt, dbNow: DETAIL.dbNow },
+      step: { attempt: 1, status: "completed", gateStatus: "awaiting", updatedAt: stepUpdatedAt },
+    })
+    await expect(new PurchaseTasksService(db).stageStatus(AUTH, ROW.id)).resolves.toEqual({
+      state: "awaiting_approval",
+      stalled: false,
+      version: `${ROW.updatedAt.getTime()}-${stepUpdatedAt.getTime()}-0`,
+    })
+    expect(run).toHaveBeenCalledWith(AUTH, expect.any(Function))
+  })
+
+  it("reports a draft that never ran as no state, still versioned", async () => {
+    const { db } = fakeTenantDb({
+      task: { status: "DRAFT", updatedAt: ROW.updatedAt, dbNow: DETAIL.dbNow },
+      step: null,
+    })
+    await expect(new PurchaseTasksService(db).stageStatus(AUTH, ROW.id)).resolves.toEqual({
+      state: null,
+      stalled: false,
+      version: `${ROW.updatedAt.getTime()}-0-0`,
+    })
+  })
+
+  it("404s the stage of a task the tenant cannot see", async () => {
+    const { db } = fakeTenantDb(null)
+    await expect(new PurchaseTasksService(db).stageStatus(AUTH, ROW.id)).rejects.toBeInstanceOf(
+      NotFoundException,
+    )
   })
 
   it("throws NotFound when the row is invisible — missing and other-tenant look the same", async () => {
@@ -84,7 +152,10 @@ describe("PurchaseTasksService", () => {
   })
 
   it("refuses to return stored criteria that break the schema", async () => {
-    const { db } = fakeTenantDb({ ...ROW, criteria: { vacancyMax: 1.5 } })
+    const { db } = fakeTenantDb({
+      row: { ...DETAIL, criteria: { vacancyMax: 1.5 } },
+      stage: NO_STAGE,
+    })
     await expect(new PurchaseTasksService(db).get(AUTH, ROW.id)).rejects.toThrow()
   })
 })
@@ -119,7 +190,7 @@ describe("PurchaseTasksService writes (P1-3)", () => {
 
   it("update returns the saved draft", async () => {
     const row = { ...ROW, status: "DRAFT", name: "Renamed", criteria: {} }
-    const { db } = fakeTenantDb({ kind: "updated", row })
+    const { db } = fakeTenantDb({ kind: "updated", row, stage: NO_STAGE })
     const detail = await new PurchaseTasksService(db).update(AUTH, ROW.id, {
       ...DRAFT_BODY,
       name: "Renamed",

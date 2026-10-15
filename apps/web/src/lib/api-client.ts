@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import type { ZodType } from "zod"
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api"
+import { API_URL } from "@/lib/api-url"
 
 /** The API answered, and said no. `body` is Nest's reason. */
 export class ApiError extends Error {

@@ -89,16 +89,133 @@ export const screeningApprovalGateSchema = z.strictObject({
 })
 export type ScreeningApprovalGate = z.infer<typeof screeningApprovalGateSchema>
 
-/** Payload of a job on `QUEUE_NAMES.SCREENING`. */
-export const screeningJobSchema = tenantJobSchema.extend({
-  taskId: z.uuid(),
-})
-export type ScreeningJob = z.infer<typeof screeningJobSchema>
+/** Either screening gate, discriminated on `kind`. */
+export const screeningGateSchema = z.discriminatedUnion("kind", [
+  screeningTooBroadGateSchema,
+  screeningApprovalGateSchema,
+])
+export type ScreeningGate = z.infer<typeof screeningGateSchema>
 
-/** `POST /api/dev/screening/:taskId` response (dev-only trigger, D73). */
-export const enqueueScreeningJobResponseSchema = z.object({
-  jobId: z.string().min(1),
-  queue: z.string().min(1),
-  taskId: z.uuid(),
+/** `analysis_steps.gate_kind` values (P1-6, D75). One per gate payload `kind`. */
+export const GATE_KINDS = ["SCREENING_TOO_BROAD", "SCREENING_APPROVAL"] as const
+export const gateKindSchema = z.enum(GATE_KINDS)
+
+/**
+ * `analysis_steps.gate_status` (D75):
+ * - `awaiting`: the thread is paused at the gate.
+ * - `approved`: the user approved and the stage completed.
+ * - `rejected`: Reject & Adjust. The thread stays paused at this gate until
+ *   the next Run resumes it with `approved: false`.
+ */
+export const GATE_STATUSES = ["awaiting", "approved", "rejected"] as const
+export const gateStatusSchema = z.enum(GATE_STATUSES)
+export type GateStatus = z.infer<typeof gateStatusSchema>
+
+/**
+ * Typed reasons a stage attempt failed (P1-4 AC 5), as stored in
+ * `analysis_steps.failure_reason`. All are retryable from the checkpoint.
+ */
+export const STAGE_FAILURE_REASONS = [
+  "HTAG_QUOTA_EXCEEDED",
+  "HTAG_BALANCE_EXHAUSTED",
+  "INVALID_CRITERIA",
+  /** Anything else (HtAG 5xx after retries, network, a bug). */
+  "UNEXPECTED",
+] as const
+export const stageFailureReasonSchema = z.enum(STAGE_FAILURE_REASONS)
+export type StageFailureReason = z.infer<typeof stageFailureReasonSchema>
+
+const gateNote = z.string().trim().max(2_000)
+
+/**
+ * `POST /api/purchase-tasks/:taskId/approve` (P1-6). `keep` is the subset of
+ * the gate's ranked area ids the user kept; omitted = keep all. Checked
+ * against the stored gate before anything is enqueued.
+ */
+export const approveScreeningRequestSchema = z.strictObject({
+  keep: z.array(z.string().min(1)).max(1_000).optional(),
+  note: gateNote.optional(),
 })
-export type EnqueueScreeningJobResponse = z.infer<typeof enqueueScreeningJobResponseSchema>
+export type ApproveScreeningRequest = z.infer<typeof approveScreeningRequestSchema>
+
+/** `POST /api/purchase-tasks/:taskId/reject` (Reject & Adjust, P1-6). */
+export const rejectScreeningRequestSchema = z.strictObject({
+  note: gateNote.optional(),
+})
+export type RejectScreeningRequest = z.infer<typeof rejectScreeningRequestSchema>
+
+/**
+ * Where the screening stage is, for the task detail page (P1-6):
+ * - `queued`: a run, retry or approval was requested and the worker has not
+ *   picked it up yet.
+ * - `running`: the worker is screening (an attempt row is `running`).
+ * - `awaiting_approval`: paused at a gate; `gate` says which.
+ * - `failed`: the latest attempt failed with `failureReason`; Retry re-runs it.
+ * - `rejected`: Reject & Adjust; the task is back in `DRAFT`.
+ * - `approved`: the stage completed and the task moved on.
+ *
+ * `stalled` qualifies `queued` and `running`: nothing has changed for long
+ * enough that the worker has likely lost the job (a crash between its writes,
+ * a lost queue). Retry is offered, as after a failure.
+ */
+export const SCREENING_STAGE_STATES = [
+  "queued",
+  "running",
+  "awaiting_approval",
+  "failed",
+  "rejected",
+  "approved",
+] as const
+export const screeningStageStateSchema = z.enum(SCREENING_STAGE_STATES)
+export type ScreeningStageState = z.infer<typeof screeningStageStateSchema>
+
+export const screeningStageSchema = z.strictObject({
+  state: screeningStageStateSchema,
+  /** Waiting on the worker (`queued` / `running`) with no progress for too long. */
+  stalled: z.boolean(),
+  /** Changes whenever anything the page shows could have changed; see `screeningStageStatusSchema`. */
+  version: z.string().min(1),
+  /** The latest attempt; null when queued before the first one starts. */
+  attempt: z.int().positive().nullable(),
+  /** The gate of the latest attempt, when it paused at one (any `gateStatus`). */
+  gate: screeningGateSchema.nullable(),
+  gateStatus: gateStatusSchema.nullable(),
+  failureReason: stageFailureReasonSchema.nullable(),
+  /** The latest attempt's spend. */
+  costAud: audAmountSchema,
+  /** Every attempt's spend, summed (each loop pays again). */
+  totalCostAud: audAmountSchema,
+})
+export type ScreeningStage = z.infer<typeof screeningStageSchema>
+
+/**
+ * `GET /api/purchase-tasks/:taskId/stage` (P1-6): the cheap poll behind the
+ * detail page. The browser compares `version` with the one it rendered and
+ * re-renders the page only when it differs; the API answers `304` to a
+ * matching `If-None-Match`. `state` is null for a draft that never ran.
+ */
+export const screeningStageStatusSchema = z.strictObject({
+  state: screeningStageStateSchema.nullable(),
+  stalled: z.boolean(),
+  version: screeningStageSchema.shape.version,
+})
+export type ScreeningStageStatus = z.infer<typeof screeningStageStatusSchema>
+
+const screeningJobBase = tenantJobSchema.extend({ taskId: z.uuid() })
+
+/**
+ * Payload of a job on `QUEUE_NAMES.SCREENING` (P1-6, D75):
+ * - `run`: start the stage, retry a failed attempt, or, when the thread is
+ *   paused at a gate the user rejected, resume it with `approved: false` so
+ *   the edited criteria are screened.
+ * - `approve`: resume the approval gate with `approved: true`.
+ */
+export const screeningJobSchema = z.discriminatedUnion("action", [
+  screeningJobBase.extend({ action: z.literal("run") }),
+  screeningJobBase.extend({
+    action: z.literal("approve"),
+    keep: approveScreeningRequestSchema.shape.keep,
+    note: approveScreeningRequestSchema.shape.note,
+  }),
+])
+export type ScreeningJob = z.infer<typeof screeningJobSchema>

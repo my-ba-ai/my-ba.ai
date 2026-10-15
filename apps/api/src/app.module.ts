@@ -2,7 +2,6 @@ import { Module } from "@nestjs/common"
 import { ConfigModule } from "@nestjs/config"
 import { AuthModule } from "./auth/auth.module"
 import { DatabaseModule } from "./database/database.module"
-import { DevScreeningModule } from "./dev-screening/dev-screening.module"
 import { DiagnosticsModule } from "./diagnostics/diagnostics.module"
 import { HealthModule } from "./health/health.module"
 import { PurchaseTasksModule } from "./purchase-tasks/purchase-tasks.module"
@@ -23,7 +22,6 @@ import { RedisModule } from "./redis/redis.module"
     HealthModule,
     DiagnosticsModule,
     PurchaseTasksModule,
-    DevScreeningModule,
   ],
 })
 export class AppModule {}

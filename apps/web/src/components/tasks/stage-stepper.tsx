@@ -33,7 +33,7 @@ export function StageStepper({ status, variant = "compact", className, ...rest }
             data-state={index < current ? "done" : index === current ? "current" : "todo"}
             className={cn(
               "h-1.5 w-4 rounded-full",
-              index < current && "bg-accent-teal",
+              index < current && "bg-accent-alt/80",
               index === current && "bg-accent-alt",
               index > current && "bg-border-card",
             )}
@@ -58,7 +58,7 @@ export function StageStepper({ status, variant = "compact", className, ...rest }
               aria-hidden
               className={cn(
                 "block h-1.5 rounded-full",
-                state === "done" && "bg-accent-teal",
+                state === "done" && "bg-accent-alt/80",
                 state === "current" && "bg-accent-alt",
                 state === "todo" && "bg-border-card",
               )}
@@ -66,11 +66,13 @@ export function StageStepper({ status, variant = "compact", className, ...rest }
             <span
               className={cn(
                 "block font-data text-micro uppercase",
-                state === "todo" ? "text-ink-dim max-lg:sr-only" : "text-ink-3",
+                state === "todo" ? "text-ink-dim" : "text-ink-3",
               )}
             >
               <span className="text-ink-dim">{String(index + 1).padStart(2, "0")} </span>
-              <span className="block">{TASK_STATUS_LABEL[stage]}</span>
+              <span className={cn("block", state !== "current" && "max-lg:sr-only")}>
+                {TASK_STATUS_LABEL[stage]}
+              </span>
             </span>
           </li>
         )

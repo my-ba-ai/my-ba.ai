@@ -1,8 +1,8 @@
 import { formatDateTime } from "@/lib/format"
+import { NAV_FORWARD, taskTitleTransitionName } from "@/lib/view-transitions"
 import type { PurchaseTaskSummary } from "@my-ba/shared"
 import Link from "next/link"
 import { ViewTransition } from "react"
-import { NAV_FORWARD, taskTitleTransitionName } from "@/lib/view-transitions"
 import { LockedChip } from "./locked-chip"
 import { StageStepper } from "./stage-stepper"
 import { StatusPill } from "./status-pill"
@@ -27,11 +27,11 @@ export function TaskCard({ task }: Readonly<{ task: PurchaseTaskSummary }>) {
           Updated <time dateTime={task.updatedAt}>{formatDateTime(task.updatedAt)}</time>
         </p>
       </div>
-      <div className="flex items-center gap-2 justify-self-end md:order-3">
-        {task.lockedAt ? <LockedChip /> : null}
+      <div className="flex items-center gap-2 justify-self-end md:order-2">
         <StatusPill status={task.status} />
+        {task.lockedAt ? <LockedChip /> : null}
       </div>
-      <div className="col-span-2 md:order-2 md:col-span-1">
+      <div className="col-span-2 md:order-3 md:col-span-1">
         <StageStepper status={task.status} />
       </div>
     </Link>

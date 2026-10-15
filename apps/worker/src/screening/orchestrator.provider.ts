@@ -4,11 +4,13 @@ import { createDatabase, createPool, type DatabasePool } from "@my-ba/db"
 import { htagClientConfigFromEnv } from "@my-ba/htag-client"
 import {
   createPostgresScreeningPorts,
+  createPostgresStageSync,
   LangGraphOrchestrator,
   screeningConfigFromEnv,
   type Orchestrator,
+  type StageSync,
 } from "@my-ba/orchestrator"
-import { ORCHESTRATOR, SCREENING_POOL } from "./screening.tokens"
+import { ORCHESTRATOR, SCREENING_POOL, STAGE_SYNC } from "./screening.tokens"
 
 const withContext = (message: string, context?: Record<string, unknown>) =>
   context ? `${message} ${JSON.stringify(context)}` : message
@@ -62,4 +64,11 @@ export const orchestratorProvider: Provider = {
       },
     })
   },
+}
+
+/** Status and gate sync (P1-6), on the screener's app-role pool. */
+export const stageSyncProvider: Provider = {
+  provide: STAGE_SYNC,
+  inject: [SCREENING_POOL],
+  useFactory: (pool: DatabasePool): StageSync => createPostgresStageSync(createDatabase(pool)),
 }

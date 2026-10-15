@@ -21,13 +21,14 @@ import {
   criteriaFormSchema,
   filtersCustomised,
   formToDraftCriteria,
+  runBlockers,
   weightsCustomised,
 } from "@/lib/criteria-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { RiskTolerance, Strategy } from "@my-ba/domain"
 import type { ScreeningCostEstimate } from "@my-ba/shared"
 import { Activity, ViewTransition, startTransition, useState, useTransition } from "react"
-import { type FieldPath, FormProvider, useForm } from "react-hook-form"
+import { type FieldPath, FormProvider, useForm, useFormContext, useWatch } from "react-hook-form"
 import { CriteriaStep } from "./criteria-step"
 import { ReviewStep } from "./review-step"
 import { StrategyStep } from "./strategy-step"
@@ -56,7 +57,8 @@ interface Props {
  *
  * Choosing strategy × risk prefills filters and weights from the preset (P1-8).
  * Switching preset after the investor has customised either asks first (AC 3).
- * "Create Task & Run Screening" stays disabled until P1-6 wires the run.
+ * "Create Task & Run Screening" saves with `intent: "run"` and starts the
+ * screening run (P1-6); it is disabled, listing why, until the criteria can run.
  */
 export function TaskCriteriaForm({ taskId, initialValues, estimate }: Readonly<Props>) {
   const form = useForm<CriteriaFormValues>({
@@ -100,17 +102,20 @@ export function TaskCriteriaForm({ taskId, initialValues, estimate }: Readonly<P
     startTransition(() => setStep(next))
   }
 
-  const onSaveDraft = form.handleSubmit((values) => {
-    setFailure(null)
-    startSaving(async () => {
-      const result = await saveTask(taskId, {
-        intent: "draft",
-        name: values.name,
-        criteria: formToDraftCriteria(values),
+  const save = (intent: "draft" | "run") =>
+    form.handleSubmit((values) => {
+      setFailure(null)
+      startSaving(async () => {
+        const result = await saveTask(taskId, {
+          intent,
+          name: values.name,
+          criteria: formToDraftCriteria(values),
+        })
+        setFailure(result)
       })
-      setFailure(result)
     })
-  })
+  const onSaveDraft = save("draft")
+  const onSaveAndRun = save("run")
 
   return (
     <FormProvider {...form}>
@@ -186,12 +191,7 @@ export function TaskCriteriaForm({ taskId, initialValues, estimate }: Readonly<P
                 Next
               </Button>
             ) : (
-              <Tooltip>
-                <TooltipTrigger render={<Button type="button" disabled focusableWhenDisabled />}>
-                  Create Task &amp; Run Screening
-                </TooltipTrigger>
-                <TooltipContent side="top">Screening runs arrive in P1-6.</TooltipContent>
-              </Tooltip>
+              <CreateAndRunButton isSaving={isSaving} onRun={() => void onSaveAndRun()} />
             )}
           </div>
         </div>
@@ -226,5 +226,38 @@ export function TaskCriteriaForm({ taskId, initialValues, estimate }: Readonly<P
         </DialogContent>
       </Dialog>
     </FormProvider>
+  )
+}
+
+interface CreateAndRunButtonProps {
+  isSaving: boolean
+  onRun: () => void
+}
+
+/**
+ * Its own component so watching every field re-renders only this button.
+ * Disabled until the criteria can run; the tooltip says why, matching the
+ * review step's "Ready to run?" list.
+ */
+function CreateAndRunButton({ isSaving, onRun }: Readonly<CreateAndRunButtonProps>) {
+  const { control } = useFormContext<CriteriaFormValues>()
+  const values = useWatch({ control }) as CriteriaFormValues
+  const blockers = runBlockers(values)
+  const label = "Create Task & Run Screening"
+
+  if (blockers.length > 0) {
+    return (
+      <Tooltip>
+        <TooltipTrigger render={<Button type="button" disabled focusableWhenDisabled />}>
+          {label}
+        </TooltipTrigger>
+        <TooltipContent side="top">Not runnable yet: {blockers.join("; ")}</TooltipContent>
+      </Tooltip>
+    )
+  }
+  return (
+    <Button type="button" disabled={isSaving} onClick={onRun}>
+      {isSaving ? "Starting…" : label}
+    </Button>
   )
 }

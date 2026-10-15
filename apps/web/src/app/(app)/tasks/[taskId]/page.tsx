@@ -2,11 +2,14 @@ import { ApiFailurePanel } from "@/components/api-failure-panel"
 import { PageHeader } from "@/components/shell/page-header"
 import { PageTransition } from "@/components/shell/page-transition"
 import { LockedChip } from "@/components/tasks/locked-chip"
+import { RunScreeningButton } from "@/components/tasks/run-screening-button"
+import { ScreeningStagePanel } from "@/components/tasks/screening-stage-panel"
 import { StageStepper } from "@/components/tasks/stage-stepper"
 import { Button } from "@/components/ui/button"
 import { ApiError, apiFetch } from "@/lib/api-client"
 import { classifyApiError } from "@/lib/api-failure"
 import { breadcrumbs } from "@/lib/breadcrumbs"
+import { draftToFormValues, runBlockers } from "@/lib/criteria-form"
 import { formatDateTime } from "@/lib/format"
 import { NAV_BACK, NAV_FORWARD, taskTitleTransitionName } from "@/lib/view-transitions"
 import { purchaseTaskDetailSchema, purchaseTaskIdParamSchema } from "@my-ba/shared"
@@ -31,8 +34,10 @@ async function loadTask(taskId: string) {
 }
 
 /**
- * Placeholder task detail (P0-6). Proves routing, the tenant-scoped read and the
- * 404 path. Stage views replace the body from P1-5/P1-7 onward.
+ * Task detail. P0-6 placeholder plus the screening stage (P1-6): Run from a
+ * draft, then where the stage is (queued / running / awaiting approval /
+ * failed + Retry), refreshing while the worker has it. Stage views (approval,
+ * results) replace more of the body from P1-5/P1-7 onward.
  */
 export default async function TaskDetailPage({ params }: PageProps<"/tasks/[taskId]">) {
   const { taskId } = await params
@@ -53,6 +58,7 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[task
   }
 
   const { task } = result
+  const isEditableDraft = task.status === "DRAFT" && !task.lockedAt
   return (
     <PageTransition>
       <PageHeader
@@ -69,15 +75,22 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[task
             >
               Back to Tasks
             </Button>
-            {task.status === "DRAFT" && !task.lockedAt ? (
+            {isEditableDraft ? (
               <Button
-                variant="default"
+                variant="outline"
                 render={<Link href={`/tasks/${task.id}/edit`} transitionTypes={NAV_FORWARD} />}
                 nativeButton={false}
               >
                 <Pencil aria-hidden />
                 Edit criteria
               </Button>
+            ) : null}
+            {isEditableDraft ? (
+              <RunScreeningButton
+                taskId={task.id}
+                blockers={runBlockers(draftToFormValues(task.name, task.criteria))}
+                variant={task.screening?.state === "rejected" ? "rerun" : "run"}
+              />
             ) : null}
           </>
         }
@@ -106,10 +119,14 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[task
           ))}
         </dl>
 
-        <p className="max-w-[64ch] text-body-sm text-ink-muted">
-          Stage views (screening results, approval gates, run log) arrive in Phase 1. This page
-          shows only where the task is in the pipeline.
-        </p>
+        {task.screening ? (
+          <ScreeningStagePanel taskId={task.id} stage={task.screening} />
+        ) : (
+          <p className="max-w-[64ch] text-body-sm text-ink-muted">
+            Not screened yet. Run screening when the criteria are ready; each run spends HtAG data
+            budget.
+          </p>
+        )}
       </section>
     </PageTransition>
   )
